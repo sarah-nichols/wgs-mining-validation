@@ -1,0 +1,76 @@
+---
+title: "Phyloseq"
+output: html_notebook
+---
+
+```{r setup, echo=FALSE}
+# Knitr settings: 
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(scipen = 999)
+```
+
+```{r, echo=FALSE}
+source("./src/wgs-mining-validation-source.R")
+```
+
+```{r}
+sample_info <- read.csv(file.path(data_path, "sample-info", "df-migrant-miseq.csv"))
+asv_assigned <- read.csv(file.path(data_path, "metabarcoding", "ASVs_assigned.csv"))
+asv_counts <- read.table(file.path(data_path, "metabarcoding", "ASVs_counts.tsv"))
+```
+
+format data for phyloseq
+```{r}
+asv_counts <- as.matrix(asv_counts)
+
+# Assuming your matrix is named 'my_matrix'
+# Get the column names
+original_colnames <- colnames(asv_counts)
+
+# Use gsub to extract the part of the string that starts with 'B' and is followed by three digits
+new_colnames <- gsub(".*(B\\d{3}).*", "\\1", original_colnames)
+
+# Assign the new column names to the matrix
+colnames(asv_counts) <- new_colnames
+
+rownames(asv_assigned) <- asv_assigned$seq_name
+asv_assigned <- asv_assigned[,-1]
+asv_assigned <- as.matrix(asv_assigned)
+sample_info <- drop_na(sample_info)
+rownames(sample_info) <- sample_info$sample_id_blood
+```
+
+```{r}
+OTU = otu_table(asv_counts, taxa_are_rows = TRUE)
+TAX = tax_table(asv_assigned)
+sample_data <- sample_data(sample_info)
+```
+
+```{r}
+physeq = phyloseq(OTU, TAX, sample_data)
+```
+
+```{r}
+api.physeq = subset_taxa(physeq, taxonomy_Division=="Apicomplexa")
+tax_table(api.physeq)[tax_table(api.physeq) == "Eimeria1"] <- "Eimeria"
+tax_table(api.physeq)[tax_table(api.physeq) == "Eimeria6"] <- "Eimeria"
+tax_table(api.physeq)[tax_table(api.physeq) == "Eimeria7"] <- "Eimeria"
+tax_table(api.physeq)[tax_table(api.physeq) == "Gregarina1"] <- "Gregarina"
+tax_table(api.physeq)[tax_table(api.physeq) == "Gregarina3"] <- "Gregarina"
+tax_table(api.physeq)[tax_table(api.physeq) == "Leidyana1"] <- "Leidyana"
+
+
+
+ps.prop <- transform_sample_counts(api.physeq, function(OTU) OTU/sum(OTU))
+```
+
+```{r}
+pal <- "Set3"
+phyloseq::plot_bar(ps.prop, x= "Sample", fill = "taxonomy_Genus")#+
+```
+
+```{r}
+phyloseq::plot_bar(api.physeq, x= "Sample", fill = "taxonomy_Genus")#+
+  #geom_bar(aes(color = "taxonomy_Division", fill = "taxonomy_Division", stat = "identity", position="stack"))
+```

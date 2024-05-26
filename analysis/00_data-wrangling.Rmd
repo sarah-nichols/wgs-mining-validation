@@ -1,0 +1,32 @@
+---
+title: "00_data-wrangling"
+output: html_notebook
+---
+
+```{r setup, echo=FALSE}
+# Knitr settings: 
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(scipen = 999)
+```
+
+```{r, echo=FALSE}
+source("./src/wgs-mining-validation-source.R")
+```
+
+load in data
+```{r}
+df_migrant_ids <- read.csv(file.path(data_path, "sample-info", "migrants-wgs-sequenced.csv"))
+df_miseq_ids <- read.csv(file.path(data_path, "sample-info", "202306_MiSeq_sample-info.csv"))
+```
+
+Merge the migrant and miseq dataframes to select for IDs that we will be working with
+```{r}
+df_migrant_miseq <- left_join(df_migrant_ids, df_miseq_ids, by = "ID")
+```
+
+Save data
+```{r}
+write.csv(df_migrant_miseq, file.path(data_path, "sample-info", "df-migrant-miseq.csv"))
+```
+

@@ -1,0 +1,126 @@
+---
+title: "00_data-wrangling"
+output: html_notebook
+---
+
+```{r setup, echo=FALSE}
+# Knitr settings: 
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(scipen = 999)
+```
+
+```{r, echo=FALSE}
+source("./src/wgs-mining-validation-source.R")
+```
+
+```{r}
+library(dada2);packageVersion("dada2")
+library(Biostrings); packageVersion("Biostrings")
+library(ShortRead); packageVersion("ShortRead")
+library(ggplot2); packageVersion("ggplot2")
+library(reshape2); packageVersion("reshape2")
+library(gridExtra); packageVersion("gridExtra")
+library(phyloseq); packageVersion("phyloseq")
+```
+
+
+```{r}
+fastq_path <- file.path(data_path, "metabarcoding", "fastq")
+path.out <- file.path(reports_path, "dada2_diagnostics")
+path.rds <- file.path(reports_path, "dada2_diagnostics", "rds")
+```
+
+```{r}
+fns <- list.files(fastq_path, pattern="fastq.gz", full.names=TRUE)
+```
+
+```{r}
+rc <- dada2:::rc
+theme_set(theme_bw())
+```
+
+```{r}
+lens.fn <- lapply(fns, function(fn) nchar(getSequences(fn)))
+lens <- do.call(c, lens.fn)
+hist(lens, 100)
+```
+
+```{r}
+filts <- file.path(fastq_path, "filtered", basename(fns))
+track1 <- filterAndTrim(fns, filts, minQ=3, minLen=495, maxLen=675, maxN=0, rm.phix=FALSE, maxEE=2)
+track1
+```
+
+```{r}
+drp <- derepFastq(filts, verbose=TRUE)
+```
+```{r}
+err <- learnErrors(drp, errorEstimationFunction=PacBioErrfun, BAND_SIZE=32, multithread=TRUE)
+
+saveRDS(err, file.path(path.rds, "err.rds"))
+plotErrors(err)
+```
+
+```{r}
+dd <- dada(drp, err=err, BAND_SIZE=32, multithread=TRUE)
+```
+```{r}
+cbind(filtered=track1, denoised=sapply(dd, function(x) sum(x$denoised)))
+```
+```{r}
+st <- makeSequenceTable(dd); dim(st)
+```
+```{r}
+asv_seqs <- colnames(st)
+asv_headers <- vector(dim(st)[2], mode="character")
+for (i in 1:dim(st)[2]) {asv_headers[i] <- paste(">ASV", i, sep="_")}
+asv_fasta <- c(rbind(asv_headers, asv_seqs))
+write(asv_fasta, file.path(data_path, "metabarcoding", "ASVs.fasta"))
+
+
+asv_tab <- t(st)
+row.names(asv_tab) <- sub(">", "", asv_headers)
+write.table(asv_tab, file.path(data_path, "metabarcoding", "ASVs_counts.tsv"), sep="\t", quote=F, col.names=NA)
+```
+
+```{r}
+taxo_levels <- c("Kingdom", "Supergroup", "Division", "Class", "Order", "Family", 
+    "Genus", "Species")
+trainingSet <- readRDS(file.path(data_path, "metabarcoding", "PR2", "pr2_version_4.14.0_SSU.decipher.trained.rds"))
+file_to_assign <- (file.path(data_path,"metabarcoding", "ASVs.fasta"))
+file_to_assign_xlsx = (file.path(data_path, "metabarcoding", "ASVs.xlsx"))
+file_assigned_xlsx = (file.path(data_path, "metabarcoding", "ASVs_assigned.xlsx"))
+
+# Read sequences to assign
+#  asv_to_assign <- import(file_to_assign_xlsx)
+  seq <- readDNAStringSet(file_to_assign)
+```
+
+```{r}
+ids <- IdTaxa(seq,
+              trainingSet,
+              type="extended",
+              strand="top",
+              threshold=0)
+```
+```{r}
+n_seq <- length(ids)
+df_rows <- list()
+
+# Go through all the elements of the list
+
+for(i in 1:n_seq){
+  seq_name <- names(ids[i])
+  taxonomy<- ids[[i]]$taxon
+  confidence <- ids[[i]]$confidence
+  df_rows[[i]] = data.frame(seq_name, taxonomy, confidence, taxo_level=c("Root", taxo_levels))
+}
+
+df <- purrr::reduce(df_rows, bind_rows) %>% 
+  filter(taxo_level !="Root") %>% 
+  tidyr::pivot_wider(names_from = taxo_level, values_from = c(taxonomy, confidence))
+
+write.csv(df, file = file.path(data_path, "metabarcoding", "ASVs_assigned.csv"))
+```
+
