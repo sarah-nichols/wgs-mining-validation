@@ -16,9 +16,37 @@ source("./src/wgs-mining-validation-source.R")
 
 ```{r}
 sample_info <- read.csv(file.path(data_path, "sample-info", "df-migrant-miseq.csv"))
-asv_assigned <- read.csv(file.path(data_path, "metabarcoding", "ASVs_assigned.csv"))
 asv_counts <- read.table(file.path(data_path, "metabarcoding", "ASVs_counts.tsv"))
 ```
+
+create tax table 
+```{r}
+asv_assigned <- read.csv(file.path(data_path, "metabarcoding", "ASV.report.stats.csv"))
+asv_names<- read.csv(file.path(data_path, "metabarcoding", "ASV.report.csv"))
+
+```
+
+```{r}
+
+tax_table <- asv_assigned %>%
+  left_join(asv_names, by = c("taxid")) %>%
+  dplyr::select(ASV, taxname) %>%
+  mutate(genus = case_when(
+    grepl("Cryptosporidium", taxname) ~ "Cryptosporidium",
+    grepl("Cyclospora", taxname) ~ "Cyclospora",
+    grepl("Eimeria", taxname) ~ "Eimeria",
+    grepl("Toxoplasma", taxname) ~ "Toxoplasma",
+    grepl("Ascogregarina", taxname) ~ "Ascogregarina",
+    grepl("Babesia", taxname) ~ "Babesia",
+    grepl("Eimeriorina", taxname) ~ "Eimeriorina (suborder)",
+    grepl("Conoidasida", taxname) ~ "Conoidasida (class)",
+    grepl("Theileria", taxname) ~ "Theileria",
+    grepl("Haemoproteus", taxname) ~ "Haemoproteus",
+
+    TRUE ~ NA_character_
+  ))
+```
+
 
 format data for phyloseq
 ```{r}
@@ -34,16 +62,16 @@ new_colnames <- gsub(".*(B\\d{3}).*", "\\1", original_colnames)
 # Assign the new column names to the matrix
 colnames(asv_counts) <- new_colnames
 
-rownames(asv_assigned) <- asv_assigned$seq_name
-asv_assigned <- asv_assigned[,-1]
-asv_assigned <- as.matrix(asv_assigned)
+rownames(tax_table) <- tax_table$ASV
+#tax_table <- tax_table[,-1]
+tax_table <- as.matrix(tax_table)
 sample_info <- drop_na(sample_info)
 rownames(sample_info) <- sample_info$sample_id_blood
 ```
 
 ```{r}
 OTU = otu_table(asv_counts, taxa_are_rows = TRUE)
-TAX = tax_table(asv_assigned)
+TAX = tax_table(tax_table)
 sample_data <- sample_data(sample_info)
 ```
 
@@ -52,22 +80,16 @@ physeq = phyloseq(OTU, TAX, sample_data)
 ```
 
 ```{r}
-api.physeq = subset_taxa(physeq, taxonomy_Division=="Apicomplexa")
-tax_table(api.physeq)[tax_table(api.physeq) == "Eimeria1"] <- "Eimeria"
-tax_table(api.physeq)[tax_table(api.physeq) == "Eimeria6"] <- "Eimeria"
-tax_table(api.physeq)[tax_table(api.physeq) == "Eimeria7"] <- "Eimeria"
-tax_table(api.physeq)[tax_table(api.physeq) == "Gregarina1"] <- "Gregarina"
-tax_table(api.physeq)[tax_table(api.physeq) == "Gregarina3"] <- "Gregarina"
-tax_table(api.physeq)[tax_table(api.physeq) == "Leidyana1"] <- "Leidyana"
-
-
+api.physeq = subset_taxa(physeq, genus!="NA")
 
 ps.prop <- transform_sample_counts(api.physeq, function(OTU) OTU/sum(OTU))
 ```
 
 ```{r}
 pal <- "Set3"
-phyloseq::plot_bar(ps.prop, x= "Sample", fill = "taxonomy_Genus")#+
+phyloseq::plot_bar(api.physeq, x= "Sample", fill = "genus")+geom_bar(stat="identity")
+
+
 ```
 
 ```{r}

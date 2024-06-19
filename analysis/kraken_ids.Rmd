@@ -1,0 +1,62 @@
+---
+title: "ncbi"
+output: html_notebook
+---
+
+```{r setup, echo=FALSE}
+# Knitr settings: 
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(scipen = 999)
+```
+
+```{r, echo=FALSE}
+source("./src/wgs-mining-validation-source.R")
+```
+
+```{r}
+s1 <- sample(x= c("Single",
+                  "Married", 
+                  "Married with kids", 
+                  "Married Without kids"), 
+              size = 100, 
+              replace=TRUE)
+
+s2 <- sample(x= c("Male", 
+                  "Female"), 
+             size = 100, 
+             replace=TRUE)
+
+s3 <- sample(x= c("Happy", 
+                  "Not Happy"), 
+             size = 100, 
+             replace=TRUE)
+
+d <- data.frame(cbind(s1,s2,s3))
+names(d) <- c('Relationship', 
+              'Gender', 
+              'Outcome')
+
+df <- d%>%
+  make_long(Relationship, 
+            Gender, 
+            Outcome)
+```
+
+```{r}
+library(ggsankey)
+
+devtools::install_github("davidsjoberg/ggsankey")
+pl <- ggplot(df, aes(x = x,                        
+                     next_x = next_x,                                     
+                     node = node,
+                     next_node = next_node,        
+                     fill = factor(node)))
+                     
+pl <- pl +geom_sankey(flow.alpha = 0.5,          #This Creates the transparency of your node 
+                      node.color = "black",     # This is your node color        
+                      show.legend = TRUE)        # This determines if you want your legend to show
+
+pl
+```
+

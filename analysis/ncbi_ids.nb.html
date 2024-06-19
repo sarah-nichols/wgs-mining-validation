@@ -11,7 +11,7 @@
 
 
 
-<title>Phyloseq</title>
+<title>ncbi</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -1746,7 +1746,7 @@ display: none;
 
 
 
-<h1 class="title toc-ignore">Phyloseq</h1>
+<h1 class="title toc-ignore">ncbi</h1>
 
 </div>
 
@@ -1762,110 +1762,78 @@ display: none;
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjpbInNhbXBsZV9pbmZvIDwtIHJlYWQuY3N2KGZpbGUucGF0aChkYXRhX3BhdGgsIFwic2FtcGxlLWluZm9cIiwgXCJkZi1taWdyYW50LW1pc2VxLmNzdlwiKSkiLCJhc3ZfY291bnRzIDwtIHJlYWQudGFibGUoZmlsZS5wYXRoKGRhdGFfcGF0aCwgXCJtZXRhYmFyY29kaW5nXCIsIFwiQVNWc19jb3VudHMudHN2XCIpKSJdfQ== -->
-<pre class="r"><code>sample_info &lt;- read.csv(file.path(data_path, &quot;sample-info&quot;, &quot;df-migrant-miseq.csv&quot;))
-asv_counts &lt;- read.table(file.path(data_path, &quot;metabarcoding&quot;, &quot;ASVs_counts.tsv&quot;))</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjpbImxpYnJhcnkoZHBseXIpIiwibGlicmFyeShyZWFkcikiLCJsaWJyYXJ5KHRheGl6ZSkiXX0= -->
+<pre class="r"><code>library(dplyr)
+library(readr)
+library(taxize)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<p>create tax table</p>
+<div id="read-blast-results" class="section level1">
+<h1>Read BLAST results</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjpbImFzdl9hc3NpZ25lZCA8LSByZWFkLmNzdihmaWxlLnBhdGgoZGF0YV9wYXRoLCBcIm1ldGFiYXJjb2RpbmdcIiwgXCJBU1YucmVwb3J0LnN0YXRzLmNzdlwiKSkiLCJhc3ZfbmFtZXM8LSByZWFkLmNzdihmaWxlLnBhdGgoZGF0YV9wYXRoLCBcIm1ldGFiYXJjb2RpbmdcIiwgXCJBU1YucmVwb3J0LmNzdlwiKSkiXX0= -->
-<pre class="r"><code>asv_assigned &lt;- read.csv(file.path(data_path, &quot;metabarcoding&quot;, &quot;ASV.report.stats.csv&quot;))
-asv_names&lt;- read.csv(file.path(data_path, &quot;metabarcoding&quot;, &quot;ASV.report.csv&quot;))</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYmxhc3RfcmVzdWx0cyA8LSByZWFkX3RzdihmaWxlLnBhdGgoZGF0YV9wYXRoLCBcIm1ldGFiYXJjb2RpbmdcIiwgXCJibGFzdF9yZXN1bHRzLnR4dFwiKSwgY29sX25hbWVzID0gYyhcInFzZXFpZFwiLCBcInN0YXhpZHNcIiwgXCJzc2NpbmFtZXNcIikpIn0= -->
+<pre class="r"><code>blast_results &lt;- read_tsv(file.path(data_path, &quot;metabarcoding&quot;, &quot;blast_results.txt&quot;), col_names = c(&quot;qseqid&quot;, &quot;staxids&quot;, &quot;sscinames&quot;))</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
+</div>
+<div id="function-to-fetch-taxonomy-using-taxize" class="section level1">
+<h1>Function to fetch taxonomy using taxize</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjpbInRheF90YWJsZSA8LSBhc3ZfYXNzaWduZWQgJT4lIiwiICBsZWZ0X2pvaW4oYXN2X25hbWVzLCBieSA9IGMoXCJ0YXhpZFwiKSkgJT4lIiwiICBkcGx5cjo6c2VsZWN0KEFTViwgdGF4bmFtZSkgJT4lIiwiICBtdXRhdGUoZ2VudXMgPSBjYXNlX3doZW4oIiwiICAgIGdyZXBsKFwiQ3J5cHRvc3BvcmlkaXVtXCIsIHRheG5hbWUpIH4gXCJDcnlwdG9zcG9yaWRpdW1cIiwiLCIgICAgZ3JlcGwoXCJDeWNsb3Nwb3JhXCIsIHRheG5hbWUpIH4gXCJDeWNsb3Nwb3JhXCIsIiwiICAgIGdyZXBsKFwiRWltZXJpYVwiLCB0YXhuYW1lKSB+IFwiRWltZXJpYVwiLCIsIiAgICBncmVwbChcIlRveG9wbGFzbWFcIiwgdGF4bmFtZSkgfiBcIlRveG9wbGFzbWFcIiwiLCIgICAgZ3JlcGwoXCJBc2NvZ3JlZ2FyaW5hXCIsIHRheG5hbWUpIH4gXCJBc2NvZ3JlZ2FyaW5hXCIsIiwiICAgIGdyZXBsKFwiQmFiZXNpYVwiLCB0YXhuYW1lKSB+IFwiQmFiZXNpYVwiLCIsIiAgICBncmVwbChcIkVpbWVyaW9yaW5hXCIsIHRheG5hbWUpIH4gXCJFaW1lcmlvcmluYSAoc3Vib3JkZXIpXCIsIiwiICAgIGdyZXBsKFwiQ29ub2lkYXNpZGFcIiwgdGF4bmFtZSkgfiBcIkNvbm9pZGFzaWRhIChjbGFzcylcIiwiLCIgICAgZ3JlcGwoXCJUaGVpbGVyaWFcIiwgdGF4bmFtZSkgfiBcIlRoZWlsZXJpYVwiLCIsIiAgICBncmVwbChcIkhhZW1vcHJvdGV1c1wiLCB0YXhuYW1lKSB+IFwiSGFlbW9wcm90ZXVzXCIsIiwiIiwiICAgIFRSVUUgfiBOQV9jaGFyYWN0ZXJfIiwiICApKSJdfQ== -->
-<pre class="r"><code>tax_table &lt;- asv_assigned %&gt;%
-  left_join(asv_names, by = c(&quot;taxid&quot;)) %&gt;%
-  dplyr::select(ASV, taxname) %&gt;%
-  mutate(genus = case_when(
-    grepl(&quot;Cryptosporidium&quot;, taxname) ~ &quot;Cryptosporidium&quot;,
-    grepl(&quot;Cyclospora&quot;, taxname) ~ &quot;Cyclospora&quot;,
-    grepl(&quot;Eimeria&quot;, taxname) ~ &quot;Eimeria&quot;,
-    grepl(&quot;Toxoplasma&quot;, taxname) ~ &quot;Toxoplasma&quot;,
-    grepl(&quot;Ascogregarina&quot;, taxname) ~ &quot;Ascogregarina&quot;,
-    grepl(&quot;Babesia&quot;, taxname) ~ &quot;Babesia&quot;,
-    grepl(&quot;Eimeriorina&quot;, taxname) ~ &quot;Eimeriorina (suborder)&quot;,
-    grepl(&quot;Conoidasida&quot;, taxname) ~ &quot;Conoidasida (class)&quot;,
-    grepl(&quot;Theileria&quot;, taxname) ~ &quot;Theileria&quot;,
-    grepl(&quot;Haemoproteus&quot;, taxname) ~ &quot;Haemoproteus&quot;,
+<!-- rnb-source-begin eyJkYXRhIjpbImxpYnJhcnkoZHBseXIpIiwibGlicmFyeShyZWFkcikiLCJsaWJyYXJ5KHJlbnRyZXopIiwiIiwiIiwiIiwiIyBSZWFkIEJMQVNUIHJlc3VsdHMiLCIiLCIjIEZ1bmN0aW9uIHRvIGZldGNoIHRheG9ub215IHVzaW5nIHJlbnRyZXoiLCJmZXRjaF90YXhvbm9teSA8LSBmdW5jdGlvbihzdGF4aWQpIHsiLCIgIHRyeUNhdGNoKHsiLCIgICAgaWYgKCFpcy5uYShzdGF4aWQpICYmIHN0YXhpZCAhPSBcIlwiKSB7IiwiICAgICAgdGF4X2luZm8gPC0gZW50cmV6X3N1bW1hcnkoZGIgPSBcInRheG9ub215XCIsIGlkID0gc3RheGlkKSIsIiAgICAgIHRheF9saW5lYWdlIDwtIHRheF9pbmZvJGxpbmVhZ2UiLCIgICAgICByZXR1cm4odGF4X2xpbmVhZ2UpIiwiICAgIH0gZWxzZSB7IiwiICAgICAgcmV0dXJuKE5BKSIsIiAgICB9IiwiICB9LCBlcnJvciA9IGZ1bmN0aW9uKGUpIHsiLCIgICAgcmV0dXJuKE5BKSIsIiAgfSkiLCJ9IiwiIiwiIyBBcHBseSBmdW5jdGlvbiB0byBlYWNoIHN0YXhpZCIsImJsYXN0X3Jlc3VsdHMgPC0gYmxhc3RfcmVzdWx0cyAlPiUiLCIgIG11dGF0ZSh0YXhvbm9teSA9IHNhcHBseShzdGF4aWRzLCBmZXRjaF90YXhvbm9teSkpIl19 -->
+<pre class="r"><code>library(dplyr)
+library(readr)
+library(rentrez)
 
-    TRUE ~ NA_character_
-  ))</code></pre>
+
+
+# Read BLAST results
+
+# Function to fetch taxonomy using rentrez
+fetch_taxonomy &lt;- function(staxid) {
+  tryCatch({
+    if (!is.na(staxid) &amp;&amp; staxid != &quot;&quot;) {
+      tax_info &lt;- entrez_summary(db = &quot;taxonomy&quot;, id = staxid)
+      tax_lineage &lt;- tax_info$lineage
+      return(tax_lineage)
+    } else {
+      return(NA)
+    }
+  }, error = function(e) {
+    return(NA)
+  })
+}
+
+# Apply function to each staxid
+blast_results &lt;- blast_results %&gt;%
+  mutate(taxonomy = sapply(staxids, fetch_taxonomy))</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
-<p>format data for phyloseq</p>
+</div>
+<div id="apply-function-to-each-staxid" class="section level1">
+<h1>Apply function to each staxid</h1>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjpbImFzdl9jb3VudHMgPC0gYXMubWF0cml4KGFzdl9jb3VudHMpIiwiIiwiIyBBc3N1bWluZyB5b3VyIG1hdHJpeCBpcyBuYW1lZCAnbXlfbWF0cml4JyIsIiMgR2V0IHRoZSBjb2x1bW4gbmFtZXMiLCJvcmlnaW5hbF9jb2xuYW1lcyA8LSBjb2xuYW1lcyhhc3ZfY291bnRzKSIsIiIsIiMgVXNlIGdzdWIgdG8gZXh0cmFjdCB0aGUgcGFydCBvZiB0aGUgc3RyaW5nIHRoYXQgc3RhcnRzIHdpdGggJ0InIGFuZCBpcyBmb2xsb3dlZCBieSB0aHJlZSBkaWdpdHMiLCJuZXdfY29sbmFtZXMgPC0gZ3N1YihcIi4qKEJcXFxcZHszfSkuKlwiLCBcIlxcXFwxXCIsIG9yaWdpbmFsX2NvbG5hbWVzKSIsIiIsIiMgQXNzaWduIHRoZSBuZXcgY29sdW1uIG5hbWVzIHRvIHRoZSBtYXRyaXgiLCJjb2xuYW1lcyhhc3ZfY291bnRzKSA8LSBuZXdfY29sbmFtZXMiLCIiLCJyb3duYW1lcyh0YXhfdGFibGUpIDwtIHRheF90YWJsZSRBU1YiLCIjdGF4X3RhYmxlIDwtIHRheF90YWJsZVssLTFdIiwidGF4X3RhYmxlIDwtIGFzLm1hdHJpeCh0YXhfdGFibGUpIiwic2FtcGxlX2luZm8gPC0gZHJvcF9uYShzYW1wbGVfaW5mbykiLCJyb3duYW1lcyhzYW1wbGVfaW5mbykgPC0gc2FtcGxlX2luZm8kc2FtcGxlX2lkX2Jsb29kIl19 -->
-<pre class="r"><code>asv_counts &lt;- as.matrix(asv_counts)
-
-# Assuming your matrix is named &#39;my_matrix&#39;
-# Get the column names
-original_colnames &lt;- colnames(asv_counts)
-
-# Use gsub to extract the part of the string that starts with &#39;B&#39; and is followed by three digits
-new_colnames &lt;- gsub(&quot;.*(B\\d{3}).*&quot;, &quot;\\1&quot;, original_colnames)
-
-# Assign the new column names to the matrix
-colnames(asv_counts) &lt;- new_colnames
-
-rownames(tax_table) &lt;- tax_table$ASV
-#tax_table &lt;- tax_table[,-1]
-tax_table &lt;- as.matrix(tax_table)
-sample_info &lt;- drop_na(sample_info)
-rownames(sample_info) &lt;- sample_info$sample_id_blood</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjpbIk9UVSA9IG90dV90YWJsZShhc3ZfY291bnRzLCB0YXhhX2FyZV9yb3dzID0gVFJVRSkiLCJUQVggPSB0YXhfdGFibGUodGF4X3RhYmxlKSIsInNhbXBsZV9kYXRhIDwtIHNhbXBsZV9kYXRhKHNhbXBsZV9pbmZvKSJdfQ== -->
-<pre class="r"><code>OTU = otu_table(asv_counts, taxa_are_rows = TRUE)
-TAX = tax_table(tax_table)
-sample_data &lt;- sample_data(sample_info)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjpbImJsYXN0X3Jlc3VsdHMgPC0gYmxhc3RfcmVzdWx0cyAlPiUiLCIgIG11dGF0ZSh0YXhvbm9teSA9IHNhcHBseShzdGF4aWRzLCBmZXRjaF90YXhvbm9teSkpIl19 -->
+<pre class="r"><code>blast_results &lt;- blast_results %&gt;%
+  mutate(taxonomy = sapply(staxids, fetch_taxonomy))</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoicGh5c2VxID0gcGh5bG9zZXEoT1RVLCBUQVgsIHNhbXBsZV9kYXRhKSJ9 -->
-<pre class="r"><code>physeq = phyloseq(OTU, TAX, sample_data)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjpbIiMgU2F2ZSB0byBDU1YiLCJ3cml0ZV9jc3YoYmxhc3RfcmVzdWx0cywgXCJ0YXhvbm9teV9yZXN1bHRzLmNzdlwiKSJdfQ== -->
+<pre class="r"><code># Save to CSV
+write_csv(blast_results, &quot;taxonomy_results.csv&quot;)</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjpbImFwaS5waHlzZXEgPSBzdWJzZXRfdGF4YShwaHlzZXEsIGdlbnVzIT1cIk5BXCIpIiwiIiwicHMucHJvcCA8LSB0cmFuc2Zvcm1fc2FtcGxlX2NvdW50cyhhcGkucGh5c2VxLCBmdW5jdGlvbihPVFUpIE9UVS9zdW0oT1RVKSkiXX0= -->
-<pre class="r"><code>api.physeq = subset_taxa(physeq, genus!=&quot;NA&quot;)
+</div>
 
-ps.prop &lt;- transform_sample_counts(api.physeq, function(OTU) OTU/sum(OTU))</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjpbInBhbCA8LSBcIlNldDNcIiIsInBoeWxvc2VxOjpwbG90X2JhcihhcGkucGh5c2VxLCB4PSBcIlNhbXBsZVwiLCBmaWxsID0gXCJnZW51c1wiKStnZW9tX2JhcihzdGF0PVwiaWRlbnRpdHlcIikiXX0= -->
-<pre class="r"><code>pal &lt;- &quot;Set3&quot;
-phyloseq::plot_bar(api.physeq, x= &quot;Sample&quot;, fill = &quot;genus&quot;)+geom_bar(stat=&quot;identity&quot;)</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-<!-- rnb-text-begin -->
-<!-- rnb-text-end -->
-<!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjpbInBoeWxvc2VxOjpwbG90X2JhcihhcGkucGh5c2VxLCB4PSBcIlNhbXBsZVwiLCBmaWxsID0gXCJ0YXhvbm9teV9HZW51c1wiKSMrIiwiICAjZ2VvbV9iYXIoYWVzKGNvbG9yID0gXCJ0YXhvbm9teV9EaXZpc2lvblwiLCBmaWxsID0gXCJ0YXhvbm9teV9EaXZpc2lvblwiLCBzdGF0ID0gXCJpZGVudGl0eVwiLCBwb3NpdGlvbj1cInN0YWNrXCIpKSJdfQ== -->
-<pre class="r"><code>phyloseq::plot_bar(api.physeq, x= &quot;Sample&quot;, fill = &quot;taxonomy_Genus&quot;)#+
-  #geom_bar(aes(color = &quot;taxonomy_Division&quot;, fill = &quot;taxonomy_Division&quot;, stat = &quot;identity&quot;, position=&quot;stack&quot;))</code></pre>
-<!-- rnb-source-end -->
-<!-- rnb-chunk-end -->
-
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiUGh5bG9zZXEiCm91dHB1dDogaHRtbF9ub3RlYm9vawotLS0KCmBgYHtyIHNldHVwLCBlY2hvPUZBTFNFfQojIEtuaXRyIHNldHRpbmdzOiAKa25pdHI6Om9wdHNfa25pdCRzZXQocm9vdC5kaXIgPSBycHJvanJvb3Q6OmZpbmRfcnN0dWRpb19yb290X2ZpbGUoKSkKa25pdHI6Om9wdHNfY2h1bmskc2V0KGVjaG8gPSBUUlVFLCBldmFsID0gRkFMU0UpCm9wdGlvbnMoc2NpcGVuID0gOTk5KQpgYGAKCmBgYHtyLCBlY2hvPUZBTFNFfQpzb3VyY2UoIi4vc3JjL3dncy1taW5pbmctdmFsaWRhdGlvbi1zb3VyY2UuUiIpCmBgYAoKYGBge3J9CnNhbXBsZV9pbmZvIDwtIHJlYWQuY3N2KGZpbGUucGF0aChkYXRhX3BhdGgsICJzYW1wbGUtaW5mbyIsICJkZi1taWdyYW50LW1pc2VxLmNzdiIpKQphc3ZfY291bnRzIDwtIHJlYWQudGFibGUoZmlsZS5wYXRoKGRhdGFfcGF0aCwgIm1ldGFiYXJjb2RpbmciLCAiQVNWc19jb3VudHMudHN2IikpCmBgYAoKY3JlYXRlIHRheCB0YWJsZSAKYGBge3J9CmFzdl9hc3NpZ25lZCA8LSByZWFkLmNzdihmaWxlLnBhdGgoZGF0YV9wYXRoLCAibWV0YWJhcmNvZGluZyIsICJBU1YucmVwb3J0LnN0YXRzLmNzdiIpKQphc3ZfbmFtZXM8LSByZWFkLmNzdihmaWxlLnBhdGgoZGF0YV9wYXRoLCAibWV0YWJhcmNvZGluZyIsICJBU1YucmVwb3J0LmNzdiIpKQoKYGBgCgpgYGB7cn0KCnRheF90YWJsZSA8LSBhc3ZfYXNzaWduZWQgJT4lCiAgbGVmdF9qb2luKGFzdl9uYW1lcywgYnkgPSBjKCJ0YXhpZCIpKSAlPiUKICBkcGx5cjo6c2VsZWN0KEFTViwgdGF4bmFtZSkgJT4lCiAgbXV0YXRlKGdlbnVzID0gY2FzZV93aGVuKAogICAgZ3JlcGwoIkNyeXB0b3Nwb3JpZGl1bSIsIHRheG5hbWUpIH4gIkNyeXB0b3Nwb3JpZGl1bSIsCiAgICBncmVwbCgiQ3ljbG9zcG9yYSIsIHRheG5hbWUpIH4gIkN5Y2xvc3BvcmEiLAogICAgZ3JlcGwoIkVpbWVyaWEiLCB0YXhuYW1lKSB+ICJFaW1lcmlhIiwKICAgIGdyZXBsKCJUb3hvcGxhc21hIiwgdGF4bmFtZSkgfiAiVG94b3BsYXNtYSIsCiAgICBncmVwbCgiQXNjb2dyZWdhcmluYSIsIHRheG5hbWUpIH4gIkFzY29ncmVnYXJpbmEiLAogICAgZ3JlcGwoIkJhYmVzaWEiLCB0YXhuYW1lKSB+ICJCYWJlc2lhIiwKICAgIGdyZXBsKCJFaW1lcmlvcmluYSIsIHRheG5hbWUpIH4gIkVpbWVyaW9yaW5hIChzdWJvcmRlcikiLAogICAgZ3JlcGwoIkNvbm9pZGFzaWRhIiwgdGF4bmFtZSkgfiAiQ29ub2lkYXNpZGEgKGNsYXNzKSIsCiAgICBncmVwbCgiVGhlaWxlcmlhIiwgdGF4bmFtZSkgfiAiVGhlaWxlcmlhIiwKICAgIGdyZXBsKCJIYWVtb3Byb3RldXMiLCB0YXhuYW1lKSB+ICJIYWVtb3Byb3RldXMiLAoKICAgIFRSVUUgfiBOQV9jaGFyYWN0ZXJfCiAgKSkKYGBgCgoKZm9ybWF0IGRhdGEgZm9yIHBoeWxvc2VxCmBgYHtyfQphc3ZfY291bnRzIDwtIGFzLm1hdHJpeChhc3ZfY291bnRzKQoKIyBBc3N1bWluZyB5b3VyIG1hdHJpeCBpcyBuYW1lZCAnbXlfbWF0cml4JwojIEdldCB0aGUgY29sdW1uIG5hbWVzCm9yaWdpbmFsX2NvbG5hbWVzIDwtIGNvbG5hbWVzKGFzdl9jb3VudHMpCgojIFVzZSBnc3ViIHRvIGV4dHJhY3QgdGhlIHBhcnQgb2YgdGhlIHN0cmluZyB0aGF0IHN0YXJ0cyB3aXRoICdCJyBhbmQgaXMgZm9sbG93ZWQgYnkgdGhyZWUgZGlnaXRzCm5ld19jb2xuYW1lcyA8LSBnc3ViKCIuKihCXFxkezN9KS4qIiwgIlxcMSIsIG9yaWdpbmFsX2NvbG5hbWVzKQoKIyBBc3NpZ24gdGhlIG5ldyBjb2x1bW4gbmFtZXMgdG8gdGhlIG1hdHJpeApjb2xuYW1lcyhhc3ZfY291bnRzKSA8LSBuZXdfY29sbmFtZXMKCnJvd25hbWVzKHRheF90YWJsZSkgPC0gdGF4X3RhYmxlJEFTVgojdGF4X3RhYmxlIDwtIHRheF90YWJsZVssLTFdCnRheF90YWJsZSA8LSBhcy5tYXRyaXgodGF4X3RhYmxlKQpzYW1wbGVfaW5mbyA8LSBkcm9wX25hKHNhbXBsZV9pbmZvKQpyb3duYW1lcyhzYW1wbGVfaW5mbykgPC0gc2FtcGxlX2luZm8kc2FtcGxlX2lkX2Jsb29kCmBgYAoKYGBge3J9Ck9UVSA9IG90dV90YWJsZShhc3ZfY291bnRzLCB0YXhhX2FyZV9yb3dzID0gVFJVRSkKVEFYID0gdGF4X3RhYmxlKHRheF90YWJsZSkKc2FtcGxlX2RhdGEgPC0gc2FtcGxlX2RhdGEoc2FtcGxlX2luZm8pCmBgYAoKYGBge3J9CnBoeXNlcSA9IHBoeWxvc2VxKE9UVSwgVEFYLCBzYW1wbGVfZGF0YSkKYGBgCgpgYGB7cn0KYXBpLnBoeXNlcSA9IHN1YnNldF90YXhhKHBoeXNlcSwgZ2VudXMhPSJOQSIpCgpwcy5wcm9wIDwtIHRyYW5zZm9ybV9zYW1wbGVfY291bnRzKGFwaS5waHlzZXEsIGZ1bmN0aW9uKE9UVSkgT1RVL3N1bShPVFUpKQpgYGAKCmBgYHtyfQpwYWwgPC0gIlNldDMiCnBoeWxvc2VxOjpwbG90X2JhcihhcGkucGh5c2VxLCB4PSAiU2FtcGxlIiwgZmlsbCA9ICJnZW51cyIpK2dlb21fYmFyKHN0YXQ9ImlkZW50aXR5IikKCgpgYGAKCmBgYHtyfQpwaHlsb3NlcTo6cGxvdF9iYXIoYXBpLnBoeXNlcSwgeD0gIlNhbXBsZSIsIGZpbGwgPSAidGF4b25vbXlfR2VudXMiKSMrCiAgI2dlb21fYmFyKGFlcyhjb2xvciA9ICJ0YXhvbm9teV9EaXZpc2lvbiIsIGZpbGwgPSAidGF4b25vbXlfRGl2aXNpb24iLCBzdGF0ID0gImlkZW50aXR5IiwgcG9zaXRpb249InN0YWNrIikpCmBgYA==</div>
+<div id="rmd-source-code">LS0tCnRpdGxlOiAibmNiaSIKb3V0cHV0OiBodG1sX25vdGVib29rCi0tLQoKYGBge3Igc2V0dXAsIGVjaG89RkFMU0V9CiMgS25pdHIgc2V0dGluZ3M6IAprbml0cjo6b3B0c19rbml0JHNldChyb290LmRpciA9IHJwcm9qcm9vdDo6ZmluZF9yc3R1ZGlvX3Jvb3RfZmlsZSgpKQprbml0cjo6b3B0c19jaHVuayRzZXQoZWNobyA9IFRSVUUsIGV2YWwgPSBGQUxTRSkKb3B0aW9ucyhzY2lwZW4gPSA5OTkpCmBgYAoKYGBge3IsIGVjaG89RkFMU0V9CnNvdXJjZSgiLi9zcmMvd2dzLW1pbmluZy12YWxpZGF0aW9uLXNvdXJjZS5SIikKYGBgCgpgYGB7cn0KbGlicmFyeShkcGx5cikKbGlicmFyeShyZWFkcikKbGlicmFyeSh0YXhpemUpCmBgYAoKIyBSZWFkIEJMQVNUIHJlc3VsdHMKYGBge3J9CmJsYXN0X3Jlc3VsdHMgPC0gcmVhZF90c3YoZmlsZS5wYXRoKGRhdGFfcGF0aCwgIm1ldGFiYXJjb2RpbmciLCAiYmxhc3RfcmVzdWx0cy50eHQiKSwgY29sX25hbWVzID0gYygicXNlcWlkIiwgInN0YXhpZHMiLCAic3NjaW5hbWVzIikpCmBgYAoKCiMgRnVuY3Rpb24gdG8gZmV0Y2ggdGF4b25vbXkgdXNpbmcgdGF4aXplCgpgYGB7cn0KbGlicmFyeShkcGx5cikKbGlicmFyeShyZWFkcikKbGlicmFyeShyZW50cmV6KQoKCgojIFJlYWQgQkxBU1QgcmVzdWx0cwoKIyBGdW5jdGlvbiB0byBmZXRjaCB0YXhvbm9teSB1c2luZyByZW50cmV6CmZldGNoX3RheG9ub215IDwtIGZ1bmN0aW9uKHN0YXhpZCkgewogIHRyeUNhdGNoKHsKICAgIGlmICghaXMubmEoc3RheGlkKSAmJiBzdGF4aWQgIT0gIiIpIHsKICAgICAgdGF4X2luZm8gPC0gZW50cmV6X3N1bW1hcnkoZGIgPSAidGF4b25vbXkiLCBpZCA9IHN0YXhpZCkKICAgICAgdGF4X2xpbmVhZ2UgPC0gdGF4X2luZm8kbGluZWFnZQogICAgICByZXR1cm4odGF4X2xpbmVhZ2UpCiAgICB9IGVsc2UgewogICAgICByZXR1cm4oTkEpCiAgICB9CiAgfSwgZXJyb3IgPSBmdW5jdGlvbihlKSB7CiAgICByZXR1cm4oTkEpCiAgfSkKfQoKIyBBcHBseSBmdW5jdGlvbiB0byBlYWNoIHN0YXhpZApibGFzdF9yZXN1bHRzIDwtIGJsYXN0X3Jlc3VsdHMgJT4lCiAgbXV0YXRlKHRheG9ub215ID0gc2FwcGx5KHN0YXhpZHMsIGZldGNoX3RheG9ub215KSkKCmBgYAoKIyBBcHBseSBmdW5jdGlvbiB0byBlYWNoIHN0YXhpZApgYGB7cn0KYmxhc3RfcmVzdWx0cyA8LSBibGFzdF9yZXN1bHRzICU+JQogIG11dGF0ZSh0YXhvbm9teSA9IHNhcHBseShzdGF4aWRzLCBmZXRjaF90YXhvbm9teSkpCmBgYAoKCmBgYHtyfQojIFNhdmUgdG8gQ1NWCndyaXRlX2NzdihibGFzdF9yZXN1bHRzLCAidGF4b25vbXlfcmVzdWx0cy5jc3YiKQ==</div>
 
 
 
@@ -1912,7 +1880,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
-  window.initializeSourceEmbed("stacked-bar-plot.Rmd");
+  window.initializeSourceEmbed("ncbi_ids.Rmd");
   window.initializeCodeFolding("show" === "show");
 });
 </script>
