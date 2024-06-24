@@ -2,7 +2,7 @@
 
 #SBATCH --job-name=build_host_ref
 #SBATCH --nodes=1
-#SBATCH --partition short
+#SBATCH --partition medium
 #SBATCH --mem 80G
 #SBATCH --get-user-env=L
 #SBATCH --clusters=all
