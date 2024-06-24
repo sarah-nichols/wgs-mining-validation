@@ -11,9 +11,8 @@ module purge
 module load Kraken2/2.1.2-gompi-2021b
 
 set -eu
-if [ -f "/data/zool-zost/sann7416/island-biogeography-wgs-mining/.env" ]; then
-   . "/data/zool-zost/sann7416/island-biogeography-wgs-mining/.env"
-fi
+source "/data/biol-bird-parasites/sann7416/wgs-mining-validation/src/.env"
+
 # .env file contains KRAKEN_CAPPED
 
 wget https://genome-idx.s3.amazonaws.com/kraken/k2_pluspfp_16gb_20221209.tar.gz -O "$KRAKEN_CAPPED"

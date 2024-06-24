@@ -1,0 +1,46 @@
+17:12:33.275 INFO  NativeLibraryLoader - Loading libgkl_compression.so from jar:file:/apps/system/easybuild/software/GATK/4.1.5.0-GCCcore-9.3.0-Java-1.8/gatk-package-4.1.5.0-local.jar!/com/intel/gkl/native/libgkl_compression.so
+Jun 21, 2024 5:12:33 PM shaded.cloud_nio.com.google.auth.oauth2.ComputeEngineCredentials runningOnComputeEngine
+INFO: Failed to detect whether we are running on Google Compute Engine.
+17:12:33.507 INFO  PathSeqBuildKmers - ------------------------------------------------------------
+17:12:33.508 INFO  PathSeqBuildKmers - The Genome Analysis Toolkit (GATK) v4.1.5.0
+17:12:33.508 INFO  PathSeqBuildKmers - For support and documentation go to https://software.broadinstitute.org/gatk/
+17:12:33.508 INFO  PathSeqBuildKmers - Executing as sann7416@arc-c301 on Linux v4.18.0-147.8.1.el8_2.arc.x86_64 amd64
+17:12:33.508 INFO  PathSeqBuildKmers - Java runtime: Java HotSpot(TM) 64-Bit Server VM v1.8.0_241-b07
+17:12:33.508 INFO  PathSeqBuildKmers - Start Date/Time: June 21, 2024 5:12:33 PM BST
+17:12:33.508 INFO  PathSeqBuildKmers - ------------------------------------------------------------
+17:12:33.509 INFO  PathSeqBuildKmers - ------------------------------------------------------------
+17:12:33.509 INFO  PathSeqBuildKmers - HTSJDK Version: 2.21.2
+17:12:33.509 INFO  PathSeqBuildKmers - Picard Version: 2.21.9
+17:12:33.509 INFO  PathSeqBuildKmers - HTSJDK Defaults.COMPRESSION_LEVEL : 2
+17:12:33.509 INFO  PathSeqBuildKmers - HTSJDK Defaults.USE_ASYNC_IO_READ_FOR_SAMTOOLS : false
+17:12:33.509 INFO  PathSeqBuildKmers - HTSJDK Defaults.USE_ASYNC_IO_WRITE_FOR_SAMTOOLS : true
+17:12:33.509 INFO  PathSeqBuildKmers - HTSJDK Defaults.USE_ASYNC_IO_WRITE_FOR_TRIBBLE : false
+17:12:33.509 INFO  PathSeqBuildKmers - Deflater: IntelDeflater
+17:12:33.509 INFO  PathSeqBuildKmers - Inflater: IntelInflater
+17:12:33.509 INFO  PathSeqBuildKmers - GCS max retries/reopens: 20
+17:12:33.509 INFO  PathSeqBuildKmers - Requester pays: disabled
+17:12:33.509 INFO  PathSeqBuildKmers - Initializing engine
+17:12:33.509 INFO  PathSeqBuildKmers - Done initializing engine
+17:12:33.510 INFO  PathSeqBuildKmers - Loading reference kmers...
+17:12:33.513 INFO  PathSeqBuildKmers - Shutting down engine
+[June 21, 2024 5:12:33 PM BST] org.broadinstitute.hellbender.tools.spark.pathseq.PathSeqBuildKmers done. Elapsed time: 0.00 minutes.
+Runtime.totalMemory()=2076049408
+java.lang.IllegalArgumentException: File is not a supported reference file type: /data/biol-bird-parasites/sann7416/wgs-mining-validation
+	at htsjdk.samtools.reference.ReferenceSequenceFileFactory.lambda$getFastaExtension$0(ReferenceSequenceFileFactory.java:253)
+	at java.util.Optional.orElseGet(Optional.java:267)
+	at htsjdk.samtools.reference.ReferenceSequenceFileFactory.getFastaExtension(ReferenceSequenceFileFactory.java:253)
+	at htsjdk.samtools.reference.ReferenceSequenceFileFactory.getReferenceSequenceFile(ReferenceSequenceFileFactory.java:135)
+	at htsjdk.samtools.reference.ReferenceSequenceFileFactory.getReferenceSequenceFile(ReferenceSequenceFileFactory.java:122)
+	at htsjdk.samtools.reference.ReferenceSequenceFileFactory.getReferenceSequenceFile(ReferenceSequenceFileFactory.java:111)
+	at org.broadinstitute.hellbender.engine.spark.datasources.ReferenceFileSparkSource.getAllReferenceBases(ReferenceFileSparkSource.java:67)
+	at org.broadinstitute.hellbender.tools.spark.pathseq.PSKmerUtils.getMaskedKmersFromLocalReference(PSKmerUtils.java:41)
+	at org.broadinstitute.hellbender.tools.spark.pathseq.PathSeqBuildKmers.doWork(PathSeqBuildKmers.java:161)
+	at org.broadinstitute.hellbender.cmdline.CommandLineProgram.runTool(CommandLineProgram.java:139)
+	at org.broadinstitute.hellbender.cmdline.CommandLineProgram.instanceMainPostParseArgs(CommandLineProgram.java:191)
+	at org.broadinstitute.hellbender.cmdline.CommandLineProgram.instanceMain(CommandLineProgram.java:210)
+	at org.broadinstitute.hellbender.Main.runCommandLineProgram(Main.java:163)
+	at org.broadinstitute.hellbender.Main.mainEntry(Main.java:206)
+	at org.broadinstitute.hellbender.Main.main(Main.java:292)
+Using GATK jar /apps/system/easybuild/software/GATK/4.1.5.0-GCCcore-9.3.0-Java-1.8/gatk-package-4.1.5.0-local.jar
+Running:
+    java -Dsamjdk.use_async_io_read_samtools=false -Dsamjdk.use_async_io_write_samtools=true -Dsamjdk.use_async_io_write_tribble=false -Dsamjdk.compression_level=2 -Xmx60G -jar /apps/system/easybuild/software/GATK/4.1.5.0-GCCcore-9.3.0-Java-1.8/gatk-package-4.1.5.0-local.jar PathSeqBuildKmers --reference  --output  --kmer-mask 16 --kmer-size 31

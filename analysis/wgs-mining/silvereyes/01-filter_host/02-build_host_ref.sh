@@ -18,15 +18,15 @@ source "/data/biol-bird-parasites/sann7416/wgs-mining-validation/src/.env"
 
 echo "Building host reference..."
 gatk --java-options "-Xmx60G" BwaMemIndexImageCreator \
-	-I  "$HOST_ZOST_OUT" \
+	-I  "$HOST_ZOST_REG" \
 	-O  "$HOST_ZOST_IMG"
 
-echo "Output file: $HOST_ZOST_HSS"
+echo "Output file: $HOST_ZOST_IMG"
 
 echo "Running PathSeqBuildKmers..."
 gatk --java-options "-Xmx60G" PathSeqBuildKmers  \
-   --reference "$HOST_FASTA" \
-   --output "$HOST_HSS" \
+   --reference "$HOST_ZOST_REG" \
+   --output "$HOST_ZOST_HSS" \
    --kmer-mask 16 \
    --kmer-size 31 > pathseq_output.txt 2>&1
 
