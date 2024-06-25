@@ -15,17 +15,15 @@ source /data/biol-bird-parasites/sann7416/wgs-mining-validation/src/.env
 module purge
 module load Kraken2/2.1.2-gompi-2021b
 
-
-
 while IFS= read -r line;
 do  
   echo "Adding file: $line to library"
-  kraken2-build --add-to-library "$line" --db "$KRAKEN_CAPPED_CUSTOM" || { echo "kraken2-build failed for $line"; exit 1; }
+  kraken2-build --add-to-library "$line" --db "$KRAKEN_CUSTOM" || { echo "kraken2-build failed for $line"; exit 1; }
 done < "$SEQS_TO_ADD"
 
-kraken2-build --download-taxonomy --db "$KRAKEN_CAPPED_CUSTOM"
-kraken2-build --build --db "$KRAKEN_CAPPED_CUSTOM"
-kraken2-build --clean --db "$KRAKEN_CAPPED_CUSTOM"
+kraken2-build --download-taxonomy --db "$KRAKEN_CUSTOM"
+kraken2-build --build --db "$KRAKEN_CUSTOM"
+kraken2-build --clean --db "$KRAKEN_CUSTOM"
 
 
 
