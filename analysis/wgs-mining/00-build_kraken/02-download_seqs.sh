@@ -18,9 +18,10 @@ source "/data/biol-bird-parasites/sann7416/wgs-mining-validation/src/.env"
 wget -P "$DOWNLOAD_SEQS"/wormbase  -r -np -A "*.genomic.fa.gz" ftp://ftp.ebi.ac.uk/pub/databases/wormbase/parasite/releases/current/species/
 
 # Loop through each fasta file
-for file in "$DOWNLOAD_SEQS"/wormbase/**/*.fa.gz; 
-do
-echo "$file"
+shopt -s globstar
+set +e # Disable exit on error
+for file in "$DOWNLOAD_SEQS"/wormbase/**/*.fa.gz; do
+  echo "$file"
   gunzip -k "$file"
   decompressed_file="${file%.gz}"
   echo "$decompressed_file"
@@ -31,6 +32,7 @@ echo "$file"
   # Add the file name to the header of each sequence in the file
   sed -i "s/^>/>$bioproject|/" "$decompressed_file"
 done
+set -e # Re-enable exit on error
 
 cat $"$DOWNLOAD_SEQS"/wormbase/**/*.fa >  $"$DOWNLOAD_SEQS"/wormbase/wormbase.fasta
 rm  $"$DOWNLOAD_SEQS"/wormbase/**/*.fa
