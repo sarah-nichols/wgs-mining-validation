@@ -12,11 +12,11 @@ module purge
 module load SRA-Toolkit/3.0.3-gompi-2022a
 
 set -x
-if [ -f "/data/zool-zost/sann7416/wgs-mining-validation/.env" ]; then
-   . "/data/zool-zost/sann7416/wgs-mining-validation/.env"
-fi
+source /data/biol-bird-parasites/sann7416/wgs-mining-validation/src/.env
 
 while IFS= read -r accession
 do
-    prefetch -O /data/zool-zost/sann7416/wgs-mining-validation/data/wgs-pipeline/coverage_samples "$accession"
-done < "$SAMPLE_ACCESSIONS"
+    prefetch -O $RAW_DATA "$accession"
+    sam-dump "$accession" | samtools view -bS - > "${RAW_DATA}/${accession}.bam"
+done < "$SAMPLE_ACCESSIONS_SYLV"
+
