@@ -1,7 +1,5 @@
 #!/bin/sh
 
-# download sequences from wormbase, eupath and ncbi for building reference genome
-
 #SBATCH --job-name=download_seqs
 #SBATCH --nodes=1
 #SBATCH --partition medium
@@ -9,6 +7,8 @@
 #SBATCH --clusters=all
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user sarah.nichols@biology.ox.ac.uk
+
+# download sequences from wormbase, eupath and ncbi for building reference genome
 
 set -eu
 source "/data/biol-bird-parasites/sann7416/wgs-mining-validation/src/.env"
@@ -53,8 +53,12 @@ for file in "$DOWNLOAD_SEQS"/eupath/*.tgz; do
     tar -xvf "$file" -C "$DOWNLOAD_SEQS"/eupath
 done
 
+awk '/^>/ {if(seq && ok) {print header ORS seq} header=$0; seq=""; ok = /^>[A-Z0-9]+(\.[0-9]+)? \|/} /^[^>]/ {seq = seq ? seq ORS $0 : $0; ok = ok && !/^N+$/ && !/^x+$/} END {if(seq && ok) print header ORS seq}' $DOWNLOAD_SEQS/eupath/eupath.fasta > $DOWNLOAD_SEQS/eupath/eupath_headers.fasta
+
+shopt -s globstar
+
 cat "$DOWNLOAD_SEQS"/eupath/**/*.fna > "$DOWNLOAD_SEQS"/eupath/eupath.fasta
-rm  $"$DOWNLOAD_SEQS"/eupath/**/*.fa
+rm  $"$DOWNLOAD_SEQS"/eupath/**/*.fna
 
 module load Anaconda3/2024.02-1
 source activate $NCBI_DATASETS_CONDA
@@ -89,6 +93,6 @@ find "$DOWNLOAD_SEQS"/ncbi/parabasalia -type f -name "*.fna" -exec mv {} "$DOWNL
 cat "$DOWNLOAD_SEQS"/ncbi/parabasalia/*.fna > "$DOWNLOAD_SEQS"/ncbi/parabasalia.fasta
 rm "$DOWNLOAD_SEQS"/ncbi/parabasalia/*.fna
 
-conda deactivate $NCBI_DATASETS_CONDA
+conda deactivate
 
 
