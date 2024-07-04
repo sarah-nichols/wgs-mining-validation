@@ -14,6 +14,20 @@ options(scipen = 999)
 source("./src/wgs-mining-validation-source.R")
 ```
 
+if (!require("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install(lib="~/local/rlibs")
+
+BiocManager::install("dada2", lib="~/local/rlibs")
+BiocManager::install("Biostrings", lib="~/local/rlibs")
+BiocManager::install("ShortRead", lib="~/local/rlibs")
+BiocManager::install("ggplot2", lib="~/local/rlibs")
+BiocManager::install("reshape2", lib="~/local/rlibs")
+BiocManager::install("gridExtra", lib="~/local/rlibs")
+BiocManager::install("phyloseq", lib="~/local/rlibs")
+
+BiocManager::install("DECIPHER", lib="~/local/rlibs")
+
 ```{r}
 library(dada2);packageVersion("dada2")
 library(Biostrings); packageVersion("Biostrings")
