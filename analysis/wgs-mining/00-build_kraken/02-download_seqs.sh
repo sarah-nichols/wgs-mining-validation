@@ -14,6 +14,7 @@ set -eu
 source "/data/biol-bird-parasites/sann7416/wgs-mining-validation/src/.env"
 # .env DOWNLOAD_SEQS, NCBI_DATASETS_CONDA
 
+
 #wormbase
 wget -P "$DOWNLOAD_SEQS"/wormbase  -r -np -A "*.genomic.fa.gz" ftp://ftp.ebi.ac.uk/pub/databases/wormbase/parasite/releases/current/species/
 
@@ -52,9 +53,9 @@ wget -P "$DOWNLOAD_SEQS"/eupath ftp://ftp.ccb.jhu.edu/pub/data/EuPathDB46/TriTry
 for file in "$DOWNLOAD_SEQS"/eupath/*.tgz; do
     tar -xvf "$file" -C "$DOWNLOAD_SEQS"/eupath
 done
-
+COMMENTOUT
 awk '/^>/ {if(seq && ok) {print header ORS seq} header=$0; seq=""; ok = /^>[A-Z0-9]+(\.[0-9]+)? \|/} /^[^>]/ {seq = seq ? seq ORS $0 : $0; ok = ok && !/^N+$/ && !/^x+$/} END {if(seq && ok) print header ORS seq}' $DOWNLOAD_SEQS/eupath/eupath.fasta > $DOWNLOAD_SEQS/eupath/eupath_headers.fasta
-
+: <<'COMMENTOUT'
 shopt -s globstar
 
 cat "$DOWNLOAD_SEQS"/eupath/**/*.fna > "$DOWNLOAD_SEQS"/eupath/eupath.fasta
@@ -94,5 +95,3 @@ cat "$DOWNLOAD_SEQS"/ncbi/parabasalia/*.fna > "$DOWNLOAD_SEQS"/ncbi/parabasalia.
 rm "$DOWNLOAD_SEQS"/ncbi/parabasalia/*.fna
 
 conda deactivate
-
-
