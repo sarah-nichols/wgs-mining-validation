@@ -14,7 +14,7 @@ module purge
 module load SAMtools/1.14-GCC-11.2.0
 
 #set -eu
-. "/data/zool-zost/sann7416/wgs-mining-validation/.env" 
+source /data/biol-bird-parasites/sann7416/wgs-mining-validation/src/.env
 # .env containing HOST_FASTA, HOST_IMG and HOST_HSS
 
 # Directory containing the BAM files
