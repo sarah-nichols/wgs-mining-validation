@@ -33,6 +33,7 @@ vignettes/*.pdf
 .DS_Store
 # Data
 data/
+data/*
 # Docs
 docs/
 # Reports
