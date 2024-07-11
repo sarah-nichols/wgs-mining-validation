@@ -14,13 +14,12 @@ set -eu
 source "/data/biol-bird-parasites/sann7416/wgs-mining-validation/src/.env"
 # .env DOWNLOAD_SEQS, NCBI_DATASETS_CONDA
 
-
 #wormbase
 wget -P "$DOWNLOAD_SEQS"/wormbase  -r -np -A "*.genomic.fa.gz" ftp://ftp.ebi.ac.uk/pub/databases/wormbase/parasite/releases/current/species/
 
-# Loop through each fasta file
+# Loop through each fasta file, decompress and format header
 shopt -s globstar
-set +e # Disable exit on error
+set +e # Disable exit on error in case some sequences don't work
 for file in "$DOWNLOAD_SEQS"/wormbase/**/*.fa.gz; do
   echo "$file"
   gunzip -k "$file"
@@ -35,13 +34,15 @@ for file in "$DOWNLOAD_SEQS"/wormbase/**/*.fa.gz; do
 done
 set -e # Re-enable exit on error
 
+#concatanate into a single file
 cat $"$DOWNLOAD_SEQS"/wormbase/**/*.fa >  $"$DOWNLOAD_SEQS"/wormbase/wormbase.fasta
 rm  $"$DOWNLOAD_SEQS"/wormbase/**/*.fa
 
-#eupath
+
+
+#download relevent sequences from eupath
 wget -P "$DOWNLOAD_SEQS"/eupath ftp://ftp.ccb.jhu.edu/pub/data/EuPathDB46/AmoebaDB46.tgz
 wget -P "$DOWNLOAD_SEQS"/eupath ftp://ftp.ccb.jhu.edu/pub/data/EuPathDB46/CryptoDB46.tgz
-wget -P "$DOWNLOAD_SEQS"/eupath ftp://ftp.ccb.jhu.edu/pub/data/EuPathDB46/FungiDB46.tgz
 wget -P "$DOWNLOAD_SEQS"/eupath ftp://ftp.ccb.jhu.edu/pub/data/EuPathDB46/GiardiaDB46.tgz
 wget -P "$DOWNLOAD_SEQS"/eupath ftp://ftp.ccb.jhu.edu/pub/data/EuPathDB46/MicrosporidiaDB46.tgz
 wget -P "$DOWNLOAD_SEQS"/eupath ftp://ftp.ccb.jhu.edu/pub/data/EuPathDB46/PiroplasmaDB46.tgz
@@ -50,17 +51,23 @@ wget -P "$DOWNLOAD_SEQS"/eupath ftp://ftp.ccb.jhu.edu/pub/data/EuPathDB46/ToxoDB
 wget -P "$DOWNLOAD_SEQS"/eupath ftp://ftp.ccb.jhu.edu/pub/data/EuPathDB46/TrichDB46.tgz
 wget -P "$DOWNLOAD_SEQS"/eupath ftp://ftp.ccb.jhu.edu/pub/data/EuPathDB46/TriTrypDB46.tgz
 
+#decompress
 for file in "$DOWNLOAD_SEQS"/eupath/*.tgz; do
     tar -xvf "$file" -C "$DOWNLOAD_SEQS"/eupath
 done
-COMMENTOUT
-awk '/^>/ {if(seq && ok) {print header ORS seq} header=$0; seq=""; ok = /^>[A-Z0-9]+(\.[0-9]+)? \|/} /^[^>]/ {seq = seq ? seq ORS $0 : $0; ok = ok && !/^N+$/ && !/^x+$/} END {if(seq && ok) print header ORS seq}' $DOWNLOAD_SEQS/eupath/eupath.fasta > $DOWNLOAD_SEQS/eupath/eupath_headers.fasta
-: <<'COMMENTOUT'
+
 shopt -s globstar
 
+#concatanate into a single file and delete the rest
 cat "$DOWNLOAD_SEQS"/eupath/**/*.fna > "$DOWNLOAD_SEQS"/eupath/eupath.fasta
-rm  $"$DOWNLOAD_SEQS"/eupath/**/*.fna
+find "$DOWNLOAD_SEQS"/eupath/ -type f ! -name 'eupath.fasta' -exec rm -f {} +
 
+#format header for kraken2 to recognise
+awk '/^>/ {if(seq && ok) {print header ORS seq} header=$0; seq=""; ok = /^>[A-Z0-9]+(\.[0-9]+)? \|/} /^[^>]/ {seq = seq ? seq ORS $0 : $0; ok = ok && !/^N+$/ && !/^x+$/} END {if(seq && ok) print header ORS seq}' $DOWNLOAD_SEQS/eupath/eupath.fasta > $DOWNLOAD_SEQS/eupath/eupath_headers.fasta
+
+shopt -s globstar
+
+#download relevent sequences from ncbi
 module load Anaconda3/2024.02-1
 source activate $NCBI_DATASETS_CONDA
 
@@ -95,3 +102,7 @@ cat "$DOWNLOAD_SEQS"/ncbi/parabasalia/*.fna > "$DOWNLOAD_SEQS"/ncbi/parabasalia.
 rm "$DOWNLOAD_SEQS"/ncbi/parabasalia/*.fna
 
 conda deactivate
+
+wget https://github.com/pr2database/pr2database/releases/download/v5.0.0/pr2_version_5.0.0_SSU_taxo_long.fasta.gz -O "$DOWNLOAD_SEQS"/pr2/pr2_version_5.0.0_SSU_taxo_long.fasta.gz
+gunzip "$DOWNLOAD_SEQS"/pr2/pr2_version_5.0.0_SSU_taxo_long.fasta.gz
+
