@@ -42,13 +42,13 @@ samtools fastq -1 "$forward_fastq_file" -2 "$reverse_fastq_file" -n "$bam_file"
 sample=$(basename "${forward_fastq_file%.1.fastq}.merged" .fastq)
 
 # Interleave the two FASTQ files into a single FASTQ file using ABYSS
-pear -f "$forward_fastq_file" -r "$reverse_fastq_file" -o "${ASSEMBLED_FASTQS_ZOST}/${sample}".fastq
+#pear -f "$forward_fastq_file" -r "$reverse_fastq_file" -o "${ASSEMBLED_FASTQS_ZOST}/${sample}".fastq
 
  
-kraken2 --db "$KRAKEN_CUSTOM" \
+kraken2 --db "$KRAKEN_CUSTOM2" \
   --threads 16 \
-  --classified-out \
+  --paired \
   --use-names \
   --output "$KRAKEN_OUTPUT_ZOST_PAIRED"/"$sample".stats.report \
   --report "$KRAKEN_REPORT_ZOST_PAIRED"/"$sample".report \
-   "${ASSEMBLED_FASTQS_ZOST}/${sample}"*.assembled.fastq
+   "${forward_fastq_file}" "${reverse_fastq_file}"

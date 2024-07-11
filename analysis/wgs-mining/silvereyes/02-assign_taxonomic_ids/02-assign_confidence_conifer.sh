@@ -23,14 +23,16 @@ echo -e "sample_id\ttaxon_name\ttaxid\treads\tP25\tP50\tP75" > $CONIFER_OUTPUT_Z
 for file in $KRAKEN_OUTPUT_ZOST_PAIRED/*.report
 do
   # Run conifer on the file
-  ./conifer --rtl -s -i "$file" -d $KRAKEN_CUSTOM_TAXID > output.txt
+  ./conifer --both_scores -s -i "$file" -d $KRAKEN_CUSTOM_TAXID > output.txt
 
   # Get the filename without the path
   filename=$(basename "$file")
 
   # Extract the sample ID from the filename
-  sample_id=$(echo $filename | awk -F'_' '{print $2}' | awk -F'.' '{print $1}')
+  sample_id=$(echo $filename | awk '{match($0, /^[A-Za-z]{3}[0-9]{1,2}/, arr); print arr[0]}')
 
+  echo "Filename: $filename"
+  echo "Sample ID: $sample_id"
   # Add a column for the sample ID to the output file, skipping the header line
   awk -v id="$sample_id" 'NR>1 {printf("%s\t%s\n", id, $0)}' output.txt > output_with_id.txt
 
