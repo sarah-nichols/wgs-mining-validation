@@ -10,25 +10,25 @@
 # REQUIRES
 # --------------------------------------------------------------------------
 
-# suppressPackageStartupMessages({
-#   library(tidyverse)
-#   library(devtools)
-#   library(ggplot2)
-#   library(dada2)
-#   library(DECIPHER)
-#   library(dplyr)
-#   library(purrr)
-#   library(phyloseq)
-#   library(RColorBrewer)
-#   library(vegan)
-#   library(sf)
-#   library(sp)
-#   library(ggspatial)
-#   library(Biostrings); packageVersion("Biostrings")
-#   library(ShortRead); packageVersion("ShortRead")
-#   library(reshape2); packageVersion("reshape2")
-#   library(gridExtra); packageVersion("gridExtra")
-#   })
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(devtools)
+  library(ggplot2)
+  library(dada2)
+  library(DECIPHER)
+  library(dplyr)
+  library(purrr)
+  library(phyloseq)
+  library(RColorBrewer)
+  library(vegan)
+  library(sf)
+  library(sp)
+  library(ggspatial)
+  library(Biostrings); packageVersion("Biostrings")
+  library(ShortRead); packageVersion("ShortRead")
+  library(reshape2); packageVersion("reshape2")
+  library(gridExtra); packageVersion("gridExtra")
+  })
 
 
 
