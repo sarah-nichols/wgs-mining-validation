@@ -2,7 +2,7 @@
 
 #SBATCH --job-name=kraken_assign
 #SBATCH --nodes=1
-#SBATCH --partition medium
+#SBATCH --partition short
 #SBATCH --mem 100000
 #SBATCH --clusters=ALL
 #SBATCH --mail-type=ALL
@@ -45,7 +45,7 @@ sample=$(basename "${forward_fastq_file%.1.fastq}.merged" .fastq)
 #pear -f "$forward_fastq_file" -r "$reverse_fastq_file" -o "${ASSEMBLED_FASTQS_ZOST}/${sample}".fastq
 
  
-kraken2 --db "$KRAKEN_CUSTOM2" \
+kraken2 --db "$KRAKEN_CUSTOM" \
   --threads 16 \
   --paired \
   --use-names \
