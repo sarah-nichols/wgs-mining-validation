@@ -17,12 +17,23 @@ source("./src/wgs-mining-validation-source.R")
 ```{r}
 sample_info <- read.csv(file.path(data_path, "sample-info", "df-migrant-miseq.csv"))
 asv_counts <- read.table(file.path(data_path, "metabarcoding", "ASVs_counts.tsv"))
+
+asv_assigned_deciphr <- read.csv(file.path(data_path, "metabarcoding", "ASVs_assigned_deciphr.csv"))
 ```
 
 create tax table 
 ```{r}
-asv_assigned <- read.csv(file.path(data_path, "metabarcoding", "ASV.report.stats.csv"))
-asv_names<- read.csv(file.path(data_path, "metabarcoding", "ASV.report.csv"))
+asv_assigned_95_5 <- read.table(file.path(data_path, "metabarcoding", "megan", "megan_taxonpath_95_5.tsv"))
+asv_assigned_95_10 <- read.table(file.path(data_path, "metabarcoding", "megan", "megan_taxonpath_95_10.tsv"))
+asv_assigned_90_5 <- read.table(file.path(data_path, "metabarcoding", "megan", "megan_taxonpath_90_5.tsv"))
+asv_assigned_90_10 <- read.table(file.path(data_path, "metabarcoding", "megan", "megan_taxonpath_90_10.tsv"))
+
+asv_ncbi_protists <- read.table(file.path(data_path, "metabarcoding", "basta_ncbi_full.tsv"))
+df_separated <- separate(asv_ncbi_protists, V2, into = c("Kingdom", "Phylum", "Class", "Family", "Order", "Genus", "Species"), sep = ";")
+
+
+asv_assigned_taxonomizr_90_020 <- read.csv(file.path(data_path, "metabarcoding", "taxonomizr_90_020_tidy_taxon_path.csv"))
+asv_assigned_taxonomizr_97_015 <- read.csv(file.path(data_path, "metabarcoding", "taxonomizr_vgrep_97_015_tidy_taxon_path.csv"))
 
 ```
 
@@ -50,7 +61,8 @@ tax_table <- asv_assigned %>%
 
 format data for phyloseq
 ```{r}
-asv_counts <- as.matrix(asv_counts)
+sample_info <- drop_na(sample_info)
+rownames(sample_info) <- sample_info$sample_id_blood
 
 # Assuming your matrix is named 'my_matrix'
 # Get the column names
@@ -62,37 +74,362 @@ new_colnames <- gsub(".*(B\\d{3}).*", "\\1", original_colnames)
 # Assign the new column names to the matrix
 colnames(asv_counts) <- new_colnames
 
-rownames(tax_table) <- tax_table$ASV
-#tax_table <- tax_table[,-1]
-tax_table <- as.matrix(tax_table)
-sample_info <- drop_na(sample_info)
-rownames(sample_info) <- sample_info$sample_id_blood
-```
-
-```{r}
-OTU = otu_table(asv_counts, taxa_are_rows = TRUE)
-TAX = tax_table(tax_table)
 sample_data <- sample_data(sample_info)
+
+```
+
+preparing each tax table
+95 and 5
+```{r}
+# Remove duplicates, keeping only the first occurrence
+tax_table_95_5_unique <- asv_assigned_95_5 %>%
+  group_by(V1) %>%
+  dplyr::slice(1) %>%
+  ungroup()
+
+ASVs_assigned <- as.character(tax_table_95_5_unique$V1)
+
+# Filter asv_counts
+asv_counts_95_5 <- asv_counts %>%
+  filter(rownames(.) %in% ASVs_assigned)
+
+asv_counts_95_5 <- as.matrix(asv_counts_95_5)
+
+rownames(tax_table_95_5_unique) <- tax_table_95_5_unique$V1
+#tax_table_95_5_unique <- tax_table_95_5_unique[,-1]
+tax_table_95_5_unique <- as.matrix(tax_table_95_5_unique)
+OTU = otu_table(asv_counts_95_5, taxa_are_rows = TRUE)
+TAX = tax_table(tax_table_95_5_unique)
+
+
+physeq_95_5 = phyloseq(OTU, TAX, sample_data)
 ```
 
 ```{r}
-physeq = phyloseq(OTU, TAX, sample_data)
+physeq_95_5_filtered = subset_taxa(physeq_95_5, V4=="_Apicomplexa")
 ```
 
 ```{r}
-api.physeq = subset_taxa(physeq, genus!="NA")
-
-ps.prop <- transform_sample_counts(api.physeq, function(OTU) OTU/sum(OTU))
+ps.prop <- transform_sample_counts(physeq_95_5_filtered, function(OTU) OTU/sum(OTU))
 ```
 
 ```{r}
 pal <- "Set3"
-phyloseq::plot_bar(api.physeq, x= "Sample", fill = "genus")+geom_bar(stat="identity")
+phyloseq::plot_bar(ps.prop, x= "Sample", fill = "V8")+geom_bar(stat="identity")
 
+
+```
+preparing each tax table
+90 and 5
+```{r}
+# Remove duplicates, keeping only the first occurrence
+tax_table_90_5_unique <- asv_assigned_90_5 %>%
+  group_by(V1) %>%
+  dplyr::slice(1) %>%
+  ungroup()
+
+ASVs_assigned <- as.character(tax_table_90_5_unique$V1)
+
+# Filter asv_counts
+asv_counts_90_5 <- asv_counts %>%
+  filter(rownames(.) %in% ASVs_assigned)
+
+asv_counts_90_5 <- as.matrix(asv_counts_90_5)
+
+rownames(tax_table_90_5_unique) <- tax_table_90_5_unique$V1
+#tax_table_95_5_unique <- tax_table_95_5_unique[,-1]
+tax_table_90_5_unique <- as.matrix(tax_table_90_5_unique)
+OTU = otu_table(asv_counts_90_5, taxa_are_rows = TRUE)
+TAX = tax_table(tax_table_90_5_unique)
+
+
+physeq_90_5 = phyloseq(OTU, TAX, sample_data)
+```
+
+```{r}
+physeq_90_5_filtered = subset_taxa(physeq_90_5, V4=="_Apicomplexa")
+```
+
+```{r}
+ps.prop <- transform_sample_counts(physeq_90_5_filtered, function(OTU) OTU/sum(OTU))
+```
+
+```{r}
+pal <- "Set3"
+phyloseq::plot_bar(ps.prop, x= "Sample", fill = "V8")+geom_bar(stat="identity")
+
+
+```
+preparing each tax table
+90 and 10
+```{r}
+# Remove duplicates, keeping only the first occurrence
+tax_table_90_10_unique <- asv_assigned_90_10 %>%
+  group_by(V1) %>%
+  dplyr::slice(1) %>%
+  ungroup()
+
+ASVs_assigned <- as.character(tax_table_90_10_unique$V1)
+
+# Filter asv_counts
+asv_counts_90_10 <- asv_counts %>%
+  filter(rownames(.) %in% ASVs_assigned)
+
+asv_counts_90_10 <- as.matrix(asv_counts_90_10)
+
+rownames(tax_table_90_10_unique) <- tax_table_90_10_unique$V1
+tax_table_90_10_unique <- as.matrix(tax_table_90_10_unique)
+OTU = otu_table(asv_counts_90_10, taxa_are_rows = TRUE)
+TAX = tax_table(tax_table_90_10_unique)
+
+
+physeq_90_10 = phyloseq(OTU, TAX, sample_data)
+```
+
+```{r}
+physeq_90_10_filtered = subset_taxa(physeq_90_10, V4=="_Apicomplexa")
+```
+
+```{r}
+ps.prop <- transform_sample_counts(physeq_90_10_filtered, function(OTU) OTU/sum(OTU))
+```
+
+```{r}
+pal <- "Set3"
+phyloseq::plot_bar(ps.prop, x= "Sample", fill = "V8")+geom_bar(stat="identity")
+```
+preparing each tax table
+95 and 10
+```{r}
+# Remove duplicates, keeping only the first occurrence
+tax_table_95_10_unique <- asv_assigned_95_10 %>%
+  group_by(V1) %>%
+  dplyr::slice(1) %>%
+  ungroup()
+
+ASVs_assigned <- as.character(tax_table_95_10_unique$V1)
+
+# Filter asv_counts
+asv_counts_95_10 <- asv_counts %>%
+  filter(rownames(.) %in% ASVs_assigned)
+
+asv_counts_95_10 <- as.matrix(asv_counts_95_10)
+
+rownames(tax_table_95_10_unique) <- tax_table_95_10_unique$V1
+tax_table_95_10_unique <- as.matrix(tax_table_95_10_unique)
+OTU = otu_table(asv_counts_95_10, taxa_are_rows = TRUE)
+TAX = tax_table(tax_table_95_10_unique)
+
+
+physeq_95_10 = phyloseq(OTU, TAX, sample_data)
+```
+
+```{r}
+physeq_95_10_filtered = subset_taxa(physeq_95_10, V4=="_Apicomplexa")
+```
+
+```{r}
+ps.prop <- transform_sample_counts(physeq_95_10_filtered, function(OTU) OTU/sum(OTU))
+```
+
+```{r}
+pal <- "Set3"
+phyloseq::plot_bar(ps.prop, x= "Sample", fill = "V8")+geom_bar(stat="identity")
+```
+preparing each tax table
+full
+```{r}
+# Remove duplicates, keeping only the first occurrence
+asv_ncbi_full_unique <- asv_ncbi_full %>%
+  group_by(V1) %>%
+  dplyr::slice(1) %>%
+  ungroup()
+
+ASVs_assigned <- as.character(asv_ncbi_full_unique$V1)
+
+# Filter asv_counts
+asv_counts_ncbi_full <- asv_counts %>%
+  filter(rownames(.) %in% ASVs_assigned)
+
+
+
+asv_counts_ncbi_full <- as.matrix(asv_counts_ncbi_full)
+
+rownames(asv_ncbi_full_unique) <- asv_ncbi_full_unique$V1
+#tax_table_95_5_unique <- tax_table_95_5_unique[,-1]
+asv_ncbi_full_unique <- as.matrix(asv_ncbi_full_unique)
+OTU = otu_table(asv_counts_ncbi_full, taxa_are_rows = TRUE)
+TAX = tax_table(asv_ncbi_full_unique)
+
+
+physeq_full_ncbi = phyloseq(OTU, TAX, sample_data)
+```
+
+```{r}
+physeq_full_ncbi_filtered = subset_taxa(physeq_full_ncbi, V4 =="_Apicomplexa")
+physeq_full_ncbi_filtered = subset_taxa(physeq_full_ncbi_filtered, V8 !="NA")
+```
+
+```{r}
+ps.prop <- transform_sample_counts(physeq_full_ncbi_filtered, function(OTU) OTU/sum(OTU))
+```
+
+```{r}
+pal <- "Set3"
+phyloseq::plot_bar(ps.prop, x= "Sample", fill = "V8")+geom_bar(stat="identity")
+```
+
+
+preparing each tax table
+asv_assigned_taxonomizr_90_020
+```{r}
+# Remove duplicates, keeping only the first occurrence
+asv_assigned_taxonomizr_90_020_unique <- asv_assigned_taxonomizr_90_020 %>%
+  group_by(V1) %>%
+  dplyr::slice(1) %>%
+  ungroup()
+
+ASVs_assigned <- as.character(asv_assigned_taxonomizr_90_020_unique$V1)
+
+# Filter asv_counts
+asv_counts_tax_9002 <- asv_counts %>%
+  filter(rownames(.) %in% ASVs_assigned)
+
+asv_counts_tax_9002 <- as.matrix(asv_counts_tax_9002)
+
+rownames(asv_assigned_taxonomizr_90_020_unique) <- asv_assigned_taxonomizr_90_020_unique$V1
+#tax_table_95_5_unique <- tax_table_95_5_unique[,-1]
+asv_assigned_taxonomizr_90_020_unique <- as.matrix(asv_assigned_taxonomizr_90_020_unique)
+OTU = otu_table(asv_counts_tax_9002, taxa_are_rows = TRUE)
+TAX = tax_table(asv_assigned_taxonomizr_90_020_unique)
+
+
+physeq_taxonomizr_90_020_unique = phyloseq(OTU, TAX, sample_data)
+```
+
+
+```{r}
+physeq_full_ncbi_filtered = subset_taxa(physeq_taxonomizr_90_020_unique, V3 =="Apicomplexa")
+```
+
+```{r}
+ps.prop <- transform_sample_counts(physeq_full_ncbi_filtered, function(OTU) OTU/sum(OTU))
+```
+
+```{r}
+pal <- "Set3"
+phyloseq::plot_bar(ps.prop, x= "Sample", fill = "V7")+geom_bar(stat="identity")
+```
+preparing each tax table
+asv_assigned_taxonomizr_97_015
+```{r}
+# Remove duplicates, keeping only the first occurrence
+asv_assigned_taxonomizr_97_015_unique <- asv_assigned_taxonomizr_97_015 %>%
+  group_by(V1) %>%
+  dplyr::slice(1) %>%
+  ungroup()
+
+ASVs_assigned <- as.character(asv_assigned_taxonomizr_97_015_unique$V1)
+
+# Filter asv_counts
+asv_counts_tax_97015 <- asv_counts %>%
+  filter(rownames(.) %in% ASVs_assigned)
+
+asv_counts_tax_97015 <- as.matrix(asv_counts_tax_97015)
+
+
+rownames(asv_assigned_taxonomizr_97_015_unique) <- asv_assigned_taxonomizr_97_015_unique$V1
+#tax_table_95_5_unique <- tax_table_95_5_unique[,-1]
+asv_assigned_taxonomizr_97_015_unique <- as.matrix(asv_assigned_taxonomizr_97_015_unique)
+OTU = otu_table(asv_counts_tax_97015, taxa_are_rows = TRUE)
+TAX = tax_table(asv_assigned_taxonomizr_97_015_unique)
+
+
+physeq_taxonomizr_97_015_unique = phyloseq(OTU, TAX, sample_data)
+```
+
+
+```{r}
+physeq_full_ncbi_filtered = subset_taxa(physeq_taxonomizr_97_015_unique, V3 =="Apicomplexa")
+```
+
+```{r}
+ps.prop <- transform_sample_counts(physeq_full_ncbi_filtered, function(OTU) OTU/sum(OTU))
+```
+
+```{r}
+pal <- "Set3"
+phyloseq::plot_bar(ps.prop, x= "Sample", fill = "V7")+geom_bar(stat="identity")
+```
+
+asv_assigned_deciphr
+```{r}
+# Remove duplicates, keeping only the first occurrence
+asv_assigned_deciphr_unique <- asv_assigned_deciphr %>%
+  group_by(seq_name) %>%
+  dplyr::slice(1) %>%
+  ungroup()
+
+
+
+asv_assigned_deciphr_unique_updated <- asv_assigned_deciphr_unique %>%
+  mutate(
+    taxonomy_Genus = case_when(
+      grepl("Eimeria\\d+", taxonomy_Genus) ~ "Eimeria",
+      grepl("Gregarina\\d+", taxonomy_Genus) ~ "Gregarina",
+      TRUE ~ taxonomy_Genus
+    )
+  )
+
+
+ASVs_assigned <- as.character(asv_assigned_deciphr_unique_updated$seq_name)
+
+# Filter asv_counts
+asv_counts_deciphr <- asv_counts %>%
+  filter(rownames(.) %in% ASVs_assigned)
+
+asv_counts_deciphr <- as.matrix(asv_counts_deciphr)
+
+rownames(asv_assigned_deciphr_unique_updated) <- asv_assigned_deciphr_unique_updated$seq_name
+#tax_table_95_5_unique <- tax_table_95_5_unique[,-1]
+asv_assigned_deciphr_unique_updated <- as.matrix(asv_assigned_deciphr_unique_updated)
+OTU = otu_table(asv_counts_deciphr, taxa_are_rows = TRUE)
+TAX = tax_table(asv_assigned_deciphr_unique_updated)
+
+
+physeq_deciphr = phyloseq(OTU, TAX, sample_data)
+```
+
+
+```{r}
+physeq_deciphr_filtered = subset_taxa(physeq_deciphr, taxonomy_Division =="Apicomplexa")
 
 ```
 
 ```{r}
-phyloseq::plot_bar(api.physeq, x= "Sample", fill = "taxonomy_Genus")#+
-  #geom_bar(aes(color = "taxonomy_Division", fill = "taxonomy_Division", stat = "identity", position="stack"))
+ps.prop <- transform_sample_counts(physeq_deciphr_filtered, function(OTU) OTU/sum(OTU))
+```
+
+```{r}
+pal <- "Set3"
+phyloseq::plot_bar(ps.prop, x= "Sample", fill = "taxonomy_Genus")+geom_bar(stat="identity")
+```
+
+```{r}
+custom_palette <- c(
+  RColorBrewer::brewer.pal(n = 12, name = "Set3"),
+  "#FF5733"  # Additional color, replace with your desired color
+)
+
+# Plot histogram with ggplot2
+ggplot(asv_assigned_deciphr, aes(x = confidence_Genus, fill = taxonomy_Division)) +
+  geom_histogram(binwidth = 20, color = "black", position = "dodge2") +
+  scale_fill_manual(values = custom_palette) + # Use the custom color palette
+  scale_color_manual(values = custom_palette) + # Use the custom color palette
+  labs(
+    x = "Confidence in genus assignment",
+    y = "Frequency",
+    fill = "Taxonomic group"
+  ) +
+  theme_minimal()
 ```

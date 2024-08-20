@@ -1,3 +1,4 @@
+data/
 # History files
 .Rhistory
 .Rapp.history
@@ -33,6 +34,8 @@ vignettes/*.pdf
 .DS_Store
 # Data
 data/
+/data
+data/**
 # Docs
 docs/
 # Reports

@@ -55,9 +55,14 @@ theme_set(theme_bw())
 ```
 
 ```{r}
+plotQualityProfile(fns[1:4])
+```
+
+
+```{r}
 lens.fn <- lapply(fns, function(fn) nchar(getSequences(fn)))
 lens <- do.call(c, lens.fn)
-hist(lens, 100)
+hist(lens, 1000, xlim = c(0,900), xlab = c("Read length (bp)"), main = "")
 ```
 
 ```{r}
@@ -99,9 +104,10 @@ write.table(asv_tab, file.path(data_path, "metabarcoding", "ASVs_counts.tsv"), s
 ```
 
 ```{r}
-taxo_levels <- c("Kingdom", "Supergroup", "Division", "Class", "Order", "Family", 
+taxo_levels <- c("Root", "Kingdom", "Supergroup", "Division", "Class", "Order", "Family", 
     "Genus", "Species")
-trainingSet <- readRDS(file.path(data_path, "metabarcoding", "PR2", "pr2_version_4.14.0_SSU.decipher.trained.rds"))
+trainingSet <- readRDS(file.path(data_path, "metabarcoding", "reference_database", "pr2_version_5.0.0_SSU.decipher.trained.rds"))
+
 file_to_assign <- (file.path(data_path,"metabarcoding", "ASVs.fasta"))
 file_to_assign_xlsx = (file.path(data_path, "metabarcoding", "ASVs.xlsx"))
 file_assigned_xlsx = (file.path(data_path, "metabarcoding", "ASVs_assigned.xlsx"))
@@ -135,6 +141,6 @@ df <- purrr::reduce(df_rows, bind_rows) %>%
   filter(taxo_level !="Root") %>% 
   tidyr::pivot_wider(names_from = taxo_level, values_from = c(taxonomy, confidence))
 
-write.csv(df, file = file.path(data_path, "metabarcoding", "ASVs_assigned.csv"))
+write.csv(df, file = file.path(data_path, "metabarcoding", "ASVs_assigned_deciphr.csv"))
 ```
 
