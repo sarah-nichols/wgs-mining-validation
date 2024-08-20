@@ -24,6 +24,8 @@ for file in $KRAKEN_OUTPUT_ZOST_PAIRED/*.report
 do
   # Run conifer on the file
   ./conifer --both_scores -s -i "$file" -d $KRAKEN_CUSTOM_TAXID > output.txt
+  ./conifer --both_scores -i test_files/example.out.txt -d test_files/taxo.k2d
+
 
   # Get the filename without the path
   filename=$(basename "$file")

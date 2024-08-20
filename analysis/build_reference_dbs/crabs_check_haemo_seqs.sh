@@ -27,8 +27,4 @@ cd /data/zool-zost/sann7416/reference_database_creator-main/
 
 ./crabs visualization --method diversity --input haemosporidians_nucleotide_primers.tsv --level species --output haemosporidians_nucleotide_primers_species_diversity.png
 
-./crabs tax_format --input haemosporidians_nucleotide_primers.tsv --output haemosporidian_references.fsa --format sintax
-./crabs tax_format --input haemosporidians_nucleotide_primers.tsv --output haemosporidian_references.fasta.gz --format idt
-
-cp haemosporidian_references.fasta.gz /data/biol-bird-parasites/sann7416/wgs-mining-validation/data/metabarcoding/reference_database/haemosporidian_reference.fasta.gz
-vsearch --sintax /data/biol-bird-parasites/sann7416/wgs-mining-validation/data/metabarcoding/ASVs.fasta --db haemosporidian_references.fsa --tabbedout vsearch_output.txt 
+conda deactivate
