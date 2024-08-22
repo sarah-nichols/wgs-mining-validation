@@ -1,0 +1,317 @@
+---
+title: "conifer-output-formatting"
+output: html_notebook
+---
+
+```{r setup, echo=FALSE}
+# Knitr settings: 
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(scipen = 999)
+```
+
+```{r, echo=FALSE}
+source("./src/wgs-mining-validation-source.R")
+
+library(taxizedb)
+```
+
+```{r}
+df_conifer <- read_delim(file.path(data_path, "wgs-mining", "conifer_output_4.txt"))
+
+df_conifer_metabarcoding <- read_delim(file.path(data_path, "metabarcoding", "conifer_metabarcoding_ASVs.txt"))
+```
+
+```{r}
+df_long <- df_conifer %>%
+  select(P25, P50, P75, C25, C50, C75) %>%  
+  pivot_longer(
+    cols = c(P25, P50, P75, C25, C50, C75),
+    names_to = c("Group", "Percentile"),
+    names_pattern = "([PC])(\\d{2})",
+    values_to = "Value"
+  )
+```
+
+
+```{r}
+# Create the faceted density plot
+ggplot(df_long, aes(x = Value, fill = Percentile)) +
+  geom_density(alpha = 0.6) +
+  facet_wrap(~ Group, ncol = 1) +
+  scale_fill_brewer(palette = "Set2") +
+  labs(
+    title = "Density Plots of Confidence Scores by Confidence Type",
+    x = "Confidence Score",
+    y = "Density",
+    fill = "Percentile"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5),
+    legend.position = "right"
+  )
+
+```
+
+
+
+
+```{r}
+parasite_genera_present <- c("Leishmania", "Plasmodium", "Coccidioides", "Toxoplasma", "Cryptosporidium",
+                           "Babesia", "Eimeria", "Ascogregarina", "Crithidia", "Porospora", "Trypanosoma", 
+                           "Cystoisospora", "Fusarium", "Phytophthora", "Theileria", "Gregarina", "Spironucleus", 
+                           "Besnoitia", "Hammondia", "Cytauxzoon", "Trichomonas", "Strigomonas", "Encephalitozoon", "Cyclospora", 
+                           "Eimeriidae", "Neospora", "Hepatocystis","Acanthamoeba", "Aspergillus", "Sarcocystis", 
+                           "Amauroascus", "Entamoeba", "Hamiltosporidium", "Leptomonas", "Giardia", 
+                           "Cardiosporidium", "Haemoproteus", "Nosema", "Tritrichomonas", "Enterocytozoon", "Fonsecaea", "Exophiala", 
+                           "Porcisia", "Lotmaria", "Pyricularia", "Endotrypanum", "Ecytonucleospora", "Sporisorium", "Vickermania", "Trypanozoon", "Hexamita",
+                           "Kipferlia", "Sinuolinea", "Goussia", "Zelonia", "Parahaemoproteus", "Raphidascaris", "Proteocephalus", "Dibothriocephalus",
+                           "Cystodiscus", "Rhabdias", "Philometridae", "Selenidium", "Clonorchis", "Rhytidocystis", "Platyproteum", "Isopora", "Leucocytozoon",
+                           "Haemocystidium", "Blastocystis")
+
+# Use str_detect and mutate to create a new column
+df_parasites_names <- df_conifer %>%
+  mutate(parasite_name = case_when(
+    str_detect(taxon_name, paste(parasite_genera_present, collapse = "|")) ~ 
+      str_extract(taxon_name, paste(parasite_genera_present, collapse = "|")),
+    TRUE ~ NA
+  )) %>%
+  dplyr::select(sample_id, parasite_name) %>%
+  group_by(sample_id) %>%
+  unique() %>%
+  drop_na()
+
+# Use str_detect and mutate to create a new column
+
+
+
+df_check <- df_parasites_names %>%
+  filter(is.na(parasite_name)) %>%
+  mutate(tax_rank = taxid2rank(taxid, db = "ncbi")) %>%
+  filter(tax_rank == "genus" | tax_rank == "species")%>%
+  distinct(taxon_name, .keep_all = TRUE) %>%
+  filter(C25 > 0.4)
+
+
+```
+
+
+```{r}
+transmission_modes_dict = c(
+  "Leishmania" = "flying_insect",
+  "Plasmodium" = "flying_insect",
+  "Coccidioides" = "direct",
+  "Toxoplasma" = "two_host", 
+  "Cryptosporidium" = "direct",
+  "Babesia" = "tick_borne",
+  "Eimeria" = "direct",
+  "Ascogregarina" = "direct", 
+  "Crithidia" = "direct",
+  "Porospora" = "two_host",
+  "Trypanosoma" = "flying_insect",
+  "Cystoisospora" = "direct",
+  "Fusarium" = "direct",
+  "Phytophthora" = "direct",
+  "Theileria" = "tick_borne",
+  "Gregarina" = "direct",
+  "Spironucleus" = "direct",
+  "Besnoitia" = "flying_insect",
+  "Hammondia" = "two_host",
+  "Cytauxzoon" = "tick_borne",
+  "Trichomonas" = "direct",           
+  "Strigomonas" = "direct",
+  "Encephalitozoon" = "two_host",                           
+  "Cyclospora" = "direct",
+  "Neospora" = "two_host",
+  "Hepatocystis " = "flying_insect",
+  "Acanthamoeba" = "direct",
+  "Aspergillus" = "direct", 
+  "Sarcocystis" = "two_host",
+  "Amauroascus" = "direct",
+  "Entamoeba" = "direct",
+  "Hamiltosporidium" = "direct",
+  "Leptomonas" = "direct", 
+  "Giardia" = "direct",
+  "Cardiosporidium" = "direct",
+  "Haemoproteus" = "flying_insect",
+  "Nosema" = "direct",
+  "Tritrichomonas" = "direct",
+  "Enterocytozoon" = "two_host",
+  "Fonsecaea" = "direct",
+  "Exophiala" = "direct",
+  "Porcisia" = "flying_insect",
+  "Lotmaria" = "direct",
+  "Pyricularia" = "direct",
+  "Endotrypanum" = "flying_insect",
+  "Ecytonucleospora" = "direct",
+  "Sporisorium" = "direct",
+  "Vickermania" = "direct",
+  "Trypanozoon" = "flying-insect",
+  "Hexamita" = "direct",
+  "Sinuolinea" = "two_host",
+  "Goussia" = "direct",
+  "Kipferlia" = "unknown",
+  "Zelonia" = "flying_insect",
+  "Parahaemoproteus" = "flying_insect",
+  "Raphidascaris" = "two_host",
+  "Proteocephalus" = "two_host",
+  "Dibothriocephalus" = "two_host",
+  "Cystodiscus" = "two_host",
+  "Rhabdias" = "two_host",
+  "Philometridae" = "unknown",
+  "Selenidium" = "unknown",
+  "Clonorchis" = "two_host",
+  "Rhytidocystis" = "two_host", 
+  "Platyproteum" = "two_host",
+  "Isopora" = "direct or two_host",
+  "Leucocytozoon" = "flying_insect",
+  "Haemocystidium" = "flying_insect",
+  "Blastocystis" = "direct"
+)
+
+recorded_dict = c(
+  "Leishmania" = "birds",
+  "Plasmodium" = "birds",
+  "Coccidioides" = "birds",
+  "Toxoplasma" = "birds", 
+  "Cryptosporidium" = "birds",
+  "Babesia" = "birds",
+  "Eimeria" = "birds",
+  "Ascogregarina" = "insects", 
+  "Crithidia" = "insects",
+  "Porospora" = "marine",
+  "Trypanosoma" = "birds",
+  "Cystoisospora" = "birds",
+  "Fusarium" = "plants",
+  "Phytophthora" = "plants",
+  "Theileria" = "birds",
+  "Gregarina" = "birds",
+  "Spironucleus" = "birds",
+  "Besnoitia" = "birds",
+  "Hammondia" = "vertebrates",
+  "Cytauxzoon" = "vertebrates",
+  "Trichomonas" = "birds",           
+  "Strigomonas" = "insects",
+  "Encephalitozoon" = "birds",                           
+  "Cyclospora" = "birds",
+  "Neospora" = "birds",
+  "Hepatocystis " = "vertebrates",
+  "Acanthamoeba" = "birds",
+  "Aspergillus" = "birds", 
+  "Sarcocystis" = "birds",
+  "Amauroascus" = "vertebrates",
+  "Entamoeba" = "birds",
+  "Hamiltosporidium" = "crustacean",
+  "Leptomonas" = "insects", 
+  "Giardia" = "birds",
+  "Cardiosporidium" = "birds",
+  "Haemoproteus" = "birds",
+  "Nosema" = "insects",
+  "Tritrichomonas" = "birds",
+  "Enterocytozoon" = "birds",
+  "Fonsecaea" = "vertebrates",
+  "Exophiala" = "birds",
+  "Porcisia" = "vertebrate",
+  "Lotmaria" = "insects",
+  "Pyricularia" = "plant",
+  "Endotrypanum" = "vertebrates",
+  "Ecytonucleospora" = "birds",
+  "Sporisorium" = "plant",
+  "Vickermania" = "insects",
+  "Trypanozoon" = "birds",
+  "Hexamita" = "birds",
+  "Sinuolinea"= "vertebrates",
+  "Goussia" = "vertebrates",
+  "Kipferlia" = "unknown",
+  "Zelonia" = "vertebrates",
+  "Parahaemoproteus" = "birds",
+  "Raphidascaris" = "vertebrates",
+  "Proteocephalus" = "vertebrates",
+  "Dibothriocephalus" = "birds",
+  "Cystodiscus" = "vertebrates",
+  "Rhabdias" = "vertebrates",
+  "Philometridae" = "vertebrates",
+  "Selenidium" = "invertebrates",
+  "Clonorchis" = "vertebrates",
+  "Rhytidocystis" = "vertebrates", 
+  "Platyproteum" = "invertebrates",
+  "Isopora" = "birds",
+  "Leucocytozoon" = "birds",
+  "Haemocystidium" = "vertebrates",
+  "Blastocystis" = "birds"
+  )
+```
+
+```{r}
+df_parasites_conifer <- df_conifer %>%
+  mutate(parasite_name = case_when(
+    str_detect(taxon_name, paste(parasite_genera_present, collapse = "|")) ~ 
+      str_extract(taxon_name, paste(parasite_genera_present, collapse = "|")),
+    TRUE ~ NA)) %>%
+  mutate(transmission_mode = str_replace_all(parasite_name, pattern = transmission_modes_dict)) %>%
+  mutate(host = str_replace_all(parasite_name, pattern = recorded_dict)) %>%
+  select(., -taxon_name) %>%
+    group_by(sample_id) %>%
+  filter(host == "birds")
+
+```
+
+
+```{r}
+df_conifer_C90 <- df_parasites_conifer %>%
+  filter(C50 > 0.9) %>%
+  select(sample_id, parasite_name, transmission_mode, host) %>%
+  unique()
+
+write_csv(df_conifer_C90, file.path(data_path, "wgs-mining", "df_conifer_C90.csv"))
+
+df_conifer_C80 <- df_parasites_conifer %>%
+  filter(C50 > 0.8)%>%
+  select(sample_id, parasite_name, transmission_mode, host) %>%
+  unique()
+
+write_csv(df_conifer_C80, file.path(data_path, "wgs-mining", "df_conifer_C80.csv"))
+
+
+df_conifer_C70 <- df_parasites_conifer %>%
+  filter(C50 > 0.7)%>%
+  select(sample_id, parasite_name, transmission_mode, host) %>%
+  unique()
+
+write_csv(df_conifer_C70, file.path(data_path, "wgs-mining", "df_conifer_C70.csv"))
+
+
+df_conifer_C60 <- df_parasites_conifer %>%
+  filter(C50 > 0.6)%>%
+  select(sample_id, parasite_name, transmission_mode, host) %>%
+  unique()
+
+write_csv(df_conifer_C60, file.path(data_path, "wgs-mining", "df_conifer_C60.csv"))
+
+
+df_conifer_C50 <- df_parasites_conifer %>%
+  filter(C50 > 0.5)%>%
+  select(sample_id, parasite_name, transmission_mode, host) %>%
+  unique()
+
+df_conifer_C40 <- df_parasites_conifer %>%
+  filter(C50 > 0.4)%>%
+  select(sample_id, parasite_name, transmission_mode, host) %>%
+  unique()
+```
+
+```{r}
+df_proportions <- df_parasites_conifer %>%
+  select(sample_id, parasite_name) %>%
+  group_by(sample_id, parasite_name) %>%
+  mutate(proportion = count / sum(count)) %>%
+  ungroup()
+```
+
+
+
+```{r}
+
+```
+
