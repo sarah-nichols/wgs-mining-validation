@@ -1,0 +1,68 @@
+---
+title: "distribution_parasites_per_ind"
+output: html_notebook
+---
+
+```{r setup, echo=FALSE}
+# Knitr settings: 
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(scipen = 999)
+```
+
+```{r, echo=FALSE}
+source("./src/wgs-mining-validation-source.R")
+```
+
+```{r}
+df <- read.csv(file.path(data_path, "wrangled", "full_data.csv"))
+sample_info <- read.csv(file.path(data_path, "sample-info", "df-migrant-miseq.csv"))
+
+```
+
+```{r}
+df_wgs <- df %>%
+  filter(method == "WGS mining") %>%
+  group_by(ID, method) %>% 
+  tally()
+
+df_meta <- df %>%
+  filter(method == "Metabarcoding") %>%
+  group_by(ID, method) %>% 
+  tally()
+```
+
+```{r}
+df_0_wgs_mining <- sample_info %>%
+  filter(ID %!in% df_wgs_meta$ID) %>%
+  select(ID) %>%
+  mutate(method = "WGS mining", n = 0)
+
+df_0_metabarcoding <- sample_info %>%
+  filter(ID %!in% df_wgs_meta$ID) %>%
+  select(ID) %>%
+  mutate(method = "Metabarcoding", n = 0)
+
+df_plot <- rbind(df_0_wgs_mining, df_0_metabarcoding, df_meta, df_wgs) 
+```
+
+
+```{r}
+p1 <- 
+  ggplot(df_plot, aes(x = n)) +
+            geom_bar(binwidth = 1, position = "dodge", fill = "grey") +
+  aes(y = ..count..) +
+  facet_wrap(~method) + 
+  scale_x_continuous(name ="Number of parasites detected per individual", breaks = c(0, 1, 2, 3, 4, 5, 6))
+
+p1
+```
+```{r}
+ggplot2::ggsave(file.path(figures_path, "Figure3.png"), 
+                p1,
+                width = 16,
+                height = 10,
+                units = c("cm"))
+```
+
+
