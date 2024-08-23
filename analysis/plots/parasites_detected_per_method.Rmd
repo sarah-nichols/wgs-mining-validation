@@ -1,0 +1,116 @@
+---
+title: "parasites_detected_per_method"
+output: html_notebook
+---
+
+```{r setup, echo=FALSE}
+# Knitr settings: 
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(scipen = 999)
+```
+
+```{r, echo=FALSE}
+source("./src/wgs-mining-validation-source.R")
+```
+
+```{r}
+# Load the data
+df_all_methods <- read_csv(file.path(data_path, "wrangled", "full_data.csv"))
+```
+
+
+```{r}
+# Create a unique identifier for each combination of parasite_name and method
+data_summary <- df_all_methods %>%
+  group_by(method, parasite_name) %>%
+  summarise(num_samples = n_distinct(ID)) %>%
+  ungroup()
+```
+
+```{r}
+# Step 1: Identify co-detection of parasites across methods in the same sample
+detection_counts <- df_all_methods %>%
+  group_by(ID, parasite_name) %>%
+  summarise(method_count = n_distinct(method))
+
+# Step 2: Merge back to the original data to understand the method distribution
+merged_data <- df_all_methods %>%
+  left_join(detection_counts, by = c("ID", "parasite_name"))
+
+# Step 3: Calculate the proportion of occurrences for each parasite
+parasite_proportions <- merged_data %>%
+  group_by(parasite_name, method_count) %>%
+  summarise(count = n()) %>%
+  ungroup() %>%
+  group_by(parasite_name) %>%
+  mutate(total_count = sum(count),
+         proportion = count / total_count)
+```
+
+```{r}
+
+# Stacked bar plot
+stacked_bar_plot <- ggplot(parasite_proportions, aes(x = parasite_name, y = proportion, fill = factor(method_count))) +
+  geom_bar(stat = "identity") +
+    scale_fill_manual(values = palette) + 
+  labs(title = "",
+       x = "",
+       y = "Proportion",
+       fill = "Agreement between methods") +
+  theme_minimal() +
+  theme(legend.position = "top",
+        axis.text.x = element_blank())
+
+# Correlation matrix plot
+corr_matrix_plot <- ggplot(data_summary, aes(x = parasite_name, y = method)) +
+  geom_point(aes(size = num_samples), shape = 21,  fill = palette[5], color = "black") +  # Adjust the shape and fill color as needed
+  scale_size_continuous(range = c(3, 15), guide = guide_legend(title = "Number of Samples")) +  # Adjust the size range as needed
+  labs(title = "",
+       x = "Parasite Genera",
+       y = "Method") +
+  theme_minimal() +
+  theme(legend.position = "bottom",
+        axis.text.x = element_text(angle = 45, hjust = 1))
+
+
+combined_plot <- stacked_bar_plot / plot_spacer() / corr_matrix_plot + plot_layout(ncol = 1, heights = c(1, -0.4, 2))
+
+print(combined_plot)
+
+```
+```{r}
+ggplot2::ggsave(file.path(figures_path, "Figure1.png"), 
+                combined_plot,
+                width = 24,
+                height = 24,
+                units = c("cm"))
+```
+
+
+```{r}
+mat_eulerr <- 
+  df_all_methods %>%
+  select(-ID) %>%
+  group_by(method, parasite_name) %>%
+  distinct() %>%
+  mutate(present = TRUE) %>%
+  pivot_wider(names_from = method, values_from = present) %>%
+  replace(is.na(.), FALSE) %>%
+  column_to_rownames("parasite_name") %>%
+  as.matrix
+  
+fit <- euler(mat_eulerr)
+
+p2 <- plot(fit, quantities = TRUE, counts = TRUE, labels = list(boxes = list(col = "black", fontface = "bold")), fill = palette)
+
+p2
+```
+```{r}
+ggplot2::ggsave(file.path(figures_path, "Figure3.png"), 
+                p2,
+                width = 20,
+                height = 20,
+                units = c("cm"))
+```
+
