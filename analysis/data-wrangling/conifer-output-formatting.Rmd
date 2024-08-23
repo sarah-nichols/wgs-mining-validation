@@ -12,18 +12,16 @@ options(scipen = 999)
 
 ```{r, echo=FALSE}
 source("./src/wgs-mining-validation-source.R")
-
-library(taxizedb)
 ```
 
 ```{r}
-df_conifer <- read_delim(file.path(data_path, "wgs-mining", "conifer_output_4.txt"))
+df_conifer_wgs <- read_delim(file.path(data_path, "wgs-mining", "conifer_output_4.txt"))
 
 df_conifer_metabarcoding <- read_delim(file.path(data_path, "metabarcoding", "conifer_metabarcoding_ASVs.txt"))
 ```
 
 ```{r}
-df_long <- df_conifer %>%
+df_long <- df_conifer_wgs %>%
   select(P25, P50, P75, C25, C50, C75) %>%  
   pivot_longer(
     cols = c(P25, P50, P75, C25, C50, C75),
@@ -68,31 +66,32 @@ parasite_genera_present <- c("Leishmania", "Plasmodium", "Coccidioides", "Toxopl
                            "Porcisia", "Lotmaria", "Pyricularia", "Endotrypanum", "Ecytonucleospora", "Sporisorium", "Vickermania", "Trypanozoon", "Hexamita",
                            "Kipferlia", "Sinuolinea", "Goussia", "Zelonia", "Parahaemoproteus", "Raphidascaris", "Proteocephalus", "Dibothriocephalus",
                            "Cystodiscus", "Rhabdias", "Philometridae", "Selenidium", "Clonorchis", "Rhytidocystis", "Platyproteum", "Isopora", "Leucocytozoon",
-                           "Haemocystidium", "Blastocystis")
+                           "Haemocystidium", "Blastocystis", "Nycteria", "Echinococcus", "Xiphinema", "Paratylenchus", "Olssonium", "Longidorus", "Astomonema",
+                           "Tylencholaimellus", "Tetracapsuloides", "Echinobothrium", "Trichodorus", "Schistosoma")
 
 # Use str_detect and mutate to create a new column
-df_parasites_names <- df_conifer %>%
+df_parasites_names <- df_conifer_wgs %>%
   mutate(parasite_name = case_when(
     str_detect(taxon_name, paste(parasite_genera_present, collapse = "|")) ~ 
       str_extract(taxon_name, paste(parasite_genera_present, collapse = "|")),
-    TRUE ~ NA
-  )) %>%
-  dplyr::select(sample_id, parasite_name) %>%
-  group_by(sample_id) %>%
-  unique() %>%
-  drop_na()
-
-# Use str_detect and mutate to create a new column
+    TRUE ~ NA)) 
 
 
 
+# currently all checked to 0.7 and above
 df_check <- df_parasites_names %>%
   filter(is.na(parasite_name)) %>%
   mutate(tax_rank = taxid2rank(taxid, db = "ncbi")) %>%
   filter(tax_rank == "genus" | tax_rank == "species")%>%
-  distinct(taxon_name, .keep_all = TRUE) %>%
+  distinct(taxid, .keep_all = TRUE) %>%
   filter(C25 > 0.4)
 
+
+df_parasite_filtered <- df_parasites_names %>%
+  dplyr::select(sample_id, parasite_name) %>%
+  group_by(sample_id) %>%
+  unique() %>%
+  drop_na()
 
 ```
 
@@ -167,7 +166,19 @@ transmission_modes_dict = c(
   "Isopora" = "direct or two_host",
   "Leucocytozoon" = "flying_insect",
   "Haemocystidium" = "flying_insect",
-  "Blastocystis" = "direct"
+  "Blastocystis" = "direct",
+  "Nycteria" = "flying_insect", 
+  "Echinococcus" = "two_host",
+  "Xiphinema" = "direct",
+  "Paratylenchus" = "unknown", 
+  "Olssonium" = "unknown",
+  "Longidorus" = "unknown",
+  "Astomonema" = "unknown",
+  "Tylencholaimellus" = "unknown",
+  "Tetracapsuloides" = "two_host",
+  "Echinobothrium" = "unknown",
+  "Trichodorus" = "unknown",
+  "Schistosoma" = "two_host"
 )
 
 recorded_dict = c(
@@ -239,12 +250,24 @@ recorded_dict = c(
   "Isopora" = "birds",
   "Leucocytozoon" = "birds",
   "Haemocystidium" = "vertebrates",
-  "Blastocystis" = "birds"
+  "Blastocystis" = "birds",
+  "Nycteria" = "vertebrates",
+  "Echinococcus" = "vertebrates",
+  "Xiphinema" = "plant",
+  "Paratylenchus" = "plant",
+  "Olssonium" = "vertebrates",
+  "Longidorus" = "plant", 
+  "Astomonema" = "vertebrates",
+  "Tylencholaimellus" = "plant",
+  "Tetracapsuloides" = "vertebrates",
+  "Echinobothrium" = "vertebrates",
+  "Trichodorus" = "plant",
+  "Schistosoma" = "birds"
   )
 ```
 
 ```{r}
-df_parasites_conifer <- df_conifer %>%
+df_parasites_wgs <- df_conifer_wgs %>%
   mutate(parasite_name = case_when(
     str_detect(taxon_name, paste(parasite_genera_present, collapse = "|")) ~ 
       str_extract(taxon_name, paste(parasite_genera_present, collapse = "|")),
@@ -292,14 +315,37 @@ write_csv(df_conifer_C60, file.path(data_path, "wgs-mining", "df_conifer_C60.csv
 
 df_conifer_C50 <- df_parasites_conifer %>%
   filter(C50 > 0.5)%>%
-  select(sample_id, parasite_name, transmission_mode, host) %>%
+  select(sample_id, parasite_name, transmission_mode, host, reads) %>%
   unique()
 
-df_conifer_C40 <- df_parasites_conifer %>%
-  filter(C50 > 0.4)%>%
-  select(sample_id, parasite_name, transmission_mode, host) %>%
+df_conifer_C30 <- df_parasites_conifer %>%
+  filter(C50 > 0.3)%>%
+  select(sample_id, parasite_name, transmission_mode, host, reads) %>%
   unique()
+
+write_csv(df_conifer_C30, file.path(data_path, "wgs-mining", "df_conifer_C30.csv"))
+
 ```
+
+formatting the metabarcoding output
+```{r}
+df_conifer_metabarcoding_clean <- df_conifer_metabarcoding %>%
+  mutate(parasite_name = case_when(
+    str_detect(tax_name, paste(parasite_genera_present, collapse = "|")) ~ 
+      str_extract(tax_name, paste(parasite_genera_present, collapse = "|")),
+    TRUE ~ NA)) %>%
+  mutate(transmission_mode = str_replace_all(parasite_name, pattern = transmission_modes_dict)) %>%
+  mutate(host = str_replace_all(parasite_name, pattern = recorded_dict)) %>%
+  select(., ASV, parasite_name, transmission_mode, host, avg_rtl) %>%
+  filter(host == "birds") %>%
+  filter(avg_rtl > 0.7)
+
+write_csv(df_conifer_metabarcoding_clean, file.path(data_path, "metabarcoding", "df_conifer_metabarcoding_C70.csv"))
+
+```
+
+
+finish here
 
 ```{r}
 df_proportions <- df_parasites_conifer %>%
@@ -312,6 +358,33 @@ df_proportions <- df_parasites_conifer %>%
 
 
 ```{r}
+library(Polychrome)
+library(forcats)
+P23 = alphabet.colors(26)
+P23 <- as.vector(P23)
 
+
+ggplot(df_conifer_C30, aes(x = sample_id, y = reads, fill = parasite_name)) + 
+  geom_bar(position = "stack", stat= "identity") +
+    scale_fill_manual(values = P23)
+
+
+```
+```{r}
+ggplot(df_conifer_C70, aes(x = sample_id, y = reads, fill = parasite_name)) + 
+  geom_bar(position = "stack", stat= "identity") +
+    scale_fill_manual(values = P23)
+
+ggplot(df_conifer_C70, aes(x = sample_id, fill = parasite_name)) + 
+  geom_bar(position = "stack") +
+    scale_fill_manual(values = P23)
+
+```
+```{r}
+ggplot(df_conifer_C70, aes(x = sample_id, y = reads, fill = parasite_name)) + 
+  geom_bar(position = "stack", stat= "identity") +
+    scale_fill_manual(values = P23)
+
+```
 ```
 
