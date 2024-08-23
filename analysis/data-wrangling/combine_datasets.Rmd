@@ -19,11 +19,13 @@ sample_info <- read.csv(file.path(data_path, "sample-info", "df-migrant-miseq.cs
 
 asv_counts <- read.table(file.path(data_path, "metabarcoding", "ASVs_counts.tsv"))
 
-df_wgs <- read_delim(file.path(data_path, "wgs-mining", "df_conifer_C90.csv"))
+df_wgs <- read_delim(file.path(data_path, "wgs-mining", "df_conifer_C70.csv"))
 
 df_slides <- read_csv(file.path(data_path, "slides", "parasite_counts_slides.csv"))
 
-df_metabarcoding <- read.table(file.path(data_path, "metabarcoding", "basta_ncbi_full.tsv"))
+df_metabarcoding_blast <- read.table(file.path(data_path, "metabarcoding", "basta_ncbi_full.tsv"))
+
+df_metabarcoding_kraken <- read_csv(file.path(data_path, "metabarcoding", "df_conifer_metabarcoding_C70.csv"))
 
 df_pcr <- read_csv(file.path(data_path, "pcr", "mock_pcr_results.csv"))
 
@@ -56,7 +58,7 @@ slides_long <- pivot_longer(df_slides,
 
 
 ```{r}
-df_metabarcoding_separated <- separate(df_metabarcoding, V2, into = c("Kingdom", "Phylum", "Class", "Family", "Order", "Genus", "Species"), sep = ";")
+df_metabarcoding_separated <- separate(df_metabarcoding_blast, V2, into = c("Kingdom", "Phylum", "Class", "Family", "Order", "Genus", "Species"), sep = ";")
 
 parasite_genera_metabarcoding <- c("Theileria", "Babesia", "Isospora", "Blastocystis", "Eimeria")
 
@@ -73,8 +75,8 @@ colnames(asv_counts) <- new_colnames
 sample_ids <- sample_info %>%
   select(ID, sample_id_blood)
 
-metabarcoding_long <- df_metabarcoding_separated %>%
-rename("V1" = "ASV") %>%
+df_metabarcoding_long <- df_metabarcoding_separated %>%
+dplyr::rename("ASV" = V1) %>%
 dplyr::select(ASV, Genus) %>%
 filter(Genus %in% parasite_genera_metabarcoding) %>%
 left_join(asv_counts, by = "ASV") %>%
@@ -83,7 +85,7 @@ left_join(asv_counts, by = "ASV") %>%
               names_to = "sample_id_blood", 
               values_to = "count") %>%
   select(Genus, sample_id_blood, count) %>%
-  rename("Genus" = "parasite_name") %>%
+  dplyr::rename("parasite_name" = Genus) %>%
   filter(count > 0) %>%
   left_join(sample_ids, ., by = "sample_id_blood") %>%
   drop_na() %>%
@@ -93,6 +95,23 @@ left_join(asv_counts, by = "ASV") %>%
 ```
 
 ```{r}
+df_metabarcoding_kraken_long <- df_metabarcoding_kraken %>%
+  left_join(asv_counts, by = "ASV") %>%
+  pivot_longer(., 
+              cols = starts_with("B"), 
+              names_to = "sample_id_blood", 
+              values_to = "count") %>%
+  select(parasite_name, sample_id_blood, count) %>%
+  dplyr::filter(count > 0) %>%
+  left_join(sample_ids, ., by = "sample_id_blood") %>%
+  drop_na() %>%
+  mutate(method = "Metabarcoding Kraken") %>%
+  select(parasite_name, ID, method)
+
+```
+
+
+```{r}
 wgs_long <- df_wgs %>%
   select(parasite_name, sample_id) %>%
   rename("sample_id" = "ID") %>%
@@ -100,77 +119,9 @@ wgs_long <- df_wgs %>%
 ```
 
 ```{r}
-full_data <- rbind(wgs_long, metabarcoding_long, slides_long, pcr_long)
-```
-
-```{r}
-P14 = alphabet.colors(14)
-swatch(P14)
-pal_parasites = alphabet.colors(length(unique(full_data$parasite_name)))
-
-
-# Plot using ggplot2 with the custom color palette
-ggplot(full_data, aes(x = method, fill = parasite_name)) +
-  geom_bar(position = "stack") +
-  facet_wrap(~ ID) +
-  scale_fill_viridis_d() +  
-  labs(title = "Parasite Detection per Sample",
-       x = "Method", y = "Count") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
-print(pal_parasites)  # Print the palette to check the colors
-
-```
-```{r}
-library(Polychrome)
-P14 = alphabet.colors(14)
-P14 <- as.vector(P14)
-
-
-ggplot(full_data, aes(x = method, fill = parasite_name)) +
-  geom_bar(position = "stack") +
-  scale_fill_manual(values = P14)+  
-  labs(title = "Parasite Detection per Sample",
-       x = "Method", y = "Count") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-
+full_data <- rbind(wgs_long, df_metabarcoding_long, df_metabarcoding_kraken_long, slides_long, pcr_long)
+write_csv(full_data, file.path(data_path, "wrangled", "full_data.csv"))
 ```
 
 
-
-```{r}
-# Install ggplot2 if not already installed
-if (!requireNamespace("ggplot2", quietly = TRUE)) {
-  install.packages("ggplot2")
-}
-
-# Load the required libraries
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-
-# Load the data
-data <- full_data
-
-# Create a unique identifier for each combination of parasite_name and method
-data_summary <- data %>%
-  group_by(method, parasite_name) %>%
-  summarise(num_samples = n_distinct(ID)) %>%
-  ungroup()
-
-# Plot the heatmap using ggplot2
-ggplot(data_summary, aes(x = parasite_name, y = method, fill = num_samples)) +
-  geom_tile(color = "white") +
-  scale_fill_viridis_c() +  
-  labs(title = "Parasites detected across each method",
-       x = "Parasite Type",
-       y = "Method",
-       fill = "Number of Samples") +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-
-```
 
