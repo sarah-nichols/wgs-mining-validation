@@ -30,38 +30,50 @@ df_meta <- df %>%
   filter(method == "Metabarcoding") %>%
   group_by(ID, method) %>% 
   tally()
+
+df_meta_kraken <- df %>%
+  filter(method == "Metabarcoding Kraken") %>%
+  group_by(ID, method) %>% 
+  tally()
 ```
 
 ```{r}
 df_0_wgs_mining <- sample_info %>%
-  filter(ID %!in% df_wgs_meta$ID) %>%
+  dplyr::filter(ID %!in% df_wgs$ID) %>%
   select(ID) %>%
   mutate(method = "WGS mining", n = 0)
 
 df_0_metabarcoding <- sample_info %>%
-  filter(ID %!in% df_wgs_meta$ID) %>%
+  filter(ID %!in% df_meta$ID) %>%
   select(ID) %>%
   mutate(method = "Metabarcoding", n = 0)
 
-df_plot <- rbind(df_0_wgs_mining, df_0_metabarcoding, df_meta, df_wgs) 
+df_0_metabarcoding_kraken <- sample_info %>%
+  filter(ID %!in% df_meta_kraken$ID) %>%
+  select(ID) %>%
+  mutate(method = "Metabarcoding Kraken", n = 0)
+
+df_plot <- rbind(df_0_wgs_mining, df_0_metabarcoding, df_0_metabarcoding_kraken, df_meta, df_wgs, df_meta_kraken) 
 ```
 
 
 ```{r}
 p1 <- 
   ggplot(df_plot, aes(x = n)) +
-            geom_bar(binwidth = 1, position = "dodge", fill = "grey") +
+            geom_bar(binwidth = 1, position = "dodge", fill = palette[5], color = "black") +
   aes(y = ..count..) +
-  facet_wrap(~method) + 
-  scale_x_continuous(name ="Number of parasites detected per individual", breaks = c(0, 1, 2, 3, 4, 5, 6))
+  facet_wrap( ~ method, ncol =1)+
+  scale_x_continuous(name ="Number of parasites detected per individual", breaks = c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16))+
+  ylab("Number of individuals") +
+    theme_minimal()
 
 p1
 ```
 ```{r}
 ggplot2::ggsave(file.path(figures_path, "Figure3.png"), 
                 p1,
-                width = 16,
-                height = 10,
+                width = 10,
+                height = 12,
                 units = c("cm"))
 ```
 
