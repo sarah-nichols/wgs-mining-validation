@@ -20,8 +20,7 @@ source activate $BASTA_ENV
 
 #basta download gb -d /data/biol-bird-parasites/sann7416/conda_environments/basta_env/.basta/taxonomy
 
-basta sequence "$BLAST_OUT/combined_blast_results_fullncbi_nofilter_100hits.out" /data/biol-bird-parasites/sann7416/wgs-mining-validation/data/metabarcoding/LCA/basta_ncbi_full.out gb -d /data/biol-bird-parasites/sann7416/conda_environments/basta_env/.basta/taxonomy -i 95 -p 99 -m 1 -n 0
-
+basta sequence "$BLAST_OUT/combined_blast_results_fullncbi_100hits_entrezfilter.out" /data/biol-bird-parasites/sann7416/wgs-mining-validation/data/metabarcoding/LCA/basta_ncbi_full.tsv gb -d /data/biol-bird-parasites/sann7416/conda_environments/basta_env/.basta/taxonomy -i 97 -p 97 -m 1 -n 0
 #basta sequence "/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/metabarcoding/blast/ncbi_full/combined_blast_results_customncbi.out" /data/biol-bird-parasites/sann7416/wgs-mining-validation/data/metabarcoding/LCA/basta_ncbi_full.out gb -d /data/biol-bird-parasites/sann7416/conda_environments/basta_env/.basta/taxonomy -i 95 -p 98 
 
 

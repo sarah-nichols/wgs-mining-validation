@@ -17,7 +17,7 @@ cd "$CONIFER"
 > $CONIFER_OUTPUT_ZOST
 
 # Print the header line
-echo -e "sample_id\ttaxon_name\ttaxid\treads\tP25\tP50\tP75" > $CONIFER_OUTPUT_ZOST
+echo -e "sample_id\ttaxon_name\ttaxid\treads\tP25\tP50\tP75\tC25\tC50\tC75" > $CONIFER_OUTPUT_ZOST
 
 # Loop through all files in the directory
 for file in $KRAKEN_OUTPUT_ZOST_PAIRED/*.report
