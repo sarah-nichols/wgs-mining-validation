@@ -5,19 +5,24 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=32
-#SBATCH -A molecolb
-#SBATCH -p molecolb
 #SBATCH -o demux_%a.out # Standard output
 #SBATCH -e demux_%a.err # Standard error
 #SBATCH --mem=128GB
 #SBATCH --time=24:00:00
+#SBATCH --partition medium
 #SBATCH --mail-user=e.harney@sheffield.ac.uk
 
 ## load profile
 source ~/.bash_profile
-conda activate /usr/local/extras/Genomics/apps/mambaforge/envs/metabarcoding
+#conda activate /usr/local/extras/Genomics/apps/mambaforge/envs/metabarcoding
+module purge
+module load cutadapt/4.3-GCCcore-11.3.0
+module load SAMtools/1.16.1-GCC-11.3.0
 
-## Stage 1: Search and trims away the generic illumina library adapters. Sequences are not anchored. 
+## Stage 1: convert .bam to .fastq.gz
+samtools bam2fq $SILVEREYE_HIFI_BAM > $SILVEREYE_HIFI_FASTQ
+
+## Stage 2: Search and trims away the generic illumina library adapters. Sequences are not anchored. 
 ## Reads pass if either primer is found (not necessary for both to be found)
 cutadapt -e 0.0 -O 10 -g AATGATACGGCGACCACCGAGATCTACAC -a ATCTCGTATGCCGTCTTCTGCTTG \
 --revcomp -j 32 \
