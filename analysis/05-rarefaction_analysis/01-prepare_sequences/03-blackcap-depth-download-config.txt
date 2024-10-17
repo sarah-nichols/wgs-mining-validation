@@ -1,0 +1,4 @@
+accession_list=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/sample-info/blackcap_accessions.txt
+blackcap_samples=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/wgs-mining/rarefaction
+host_index_path=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/wgs-mining/host_reference/blackcap_index/blackcap_ref_reg.fasta
+report_dir=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/wgs-mining/rarefaction/quality_reports

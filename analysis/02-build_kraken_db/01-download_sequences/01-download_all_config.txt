@@ -1,0 +1,22 @@
+# Directory where all downloaded datasets will be saved
+download_dir=/data/biol-bird-parasites/sann7416/island-biogeography-wgs-mining/data/reference_database/downloaded_sequences
+
+# Path to the conda environment for NCBI datasets download
+ncbi_datasets_conda=/data/biol-bird-parasites/sann7416/conda_environments/ncbi_datasets
+
+# Path to the conda environment for TaxonKit (if needed for taxonomy processing)
+taxonkit_conda=/data/biol-bird-parasites/sann7416/conda_environments/taxonkit_env
+
+# Path to the conda environment for Entrez-based sequence downloads
+entrez_conda=/data/biol-bird-parasites/sann7416/conda_environments/entrez_env
+
+# Path to the taxonomy file (for NCBI Entrez download processing)
+taxid_file=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/reference_database/ncbi_custom/taxids_include.txt
+
+# Directory to taxdump files (for taxonomy database processing)
+taxdump_dir=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/reference_database/ncbi_custom/taxid_map/taxdump
+
+# Path to the Python script used for downloading sequences via Entrez
+entrez_py_script=/data/biol-bird-parasites/sann7416/island-biogeography-wgs-mining/analysis/02-build_kraken_db/01-download_sequences/download_ncbi_seqs_entrez.py
+
+

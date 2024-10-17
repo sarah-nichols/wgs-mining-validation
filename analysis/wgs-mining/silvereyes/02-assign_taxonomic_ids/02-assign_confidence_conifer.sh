@@ -17,14 +17,13 @@ cd "$CONIFER"
 > $CONIFER_OUTPUT_ZOST
 
 # Print the header line
-echo -e "sample_id\ttaxon_name\ttaxid\treads\tP25\tP50\tP75\tC25\tC50\tC75" > $CONIFER_OUTPUT_ZOST
+echo -e "sample_id\ttaxon_name\ttaxid\treads\tC25\tC50\tC75\tRTL25\tRTL50\tRTL75" > $CONIFER_OUTPUT_ZOST
 
 # Loop through all files in the directory
 for file in $KRAKEN_OUTPUT_ZOST_PAIRED/*.report
 do
   # Run conifer on the file
   ./conifer --both_scores -s -i "$file" -d $KRAKEN_CUSTOM_TAXID > output.txt
-  ./conifer --both_scores -i test_files/example.out.txt -d test_files/taxo.k2d
 
 
   # Get the filename without the path

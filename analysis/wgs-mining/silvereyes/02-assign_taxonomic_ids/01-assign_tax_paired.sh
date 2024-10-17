@@ -3,11 +3,11 @@
 #SBATCH --job-name=kraken_assign
 #SBATCH --nodes=1
 #SBATCH --partition short
-#SBATCH --mem 100000
-#SBATCH --clusters=ALL
+#SBATCH --mem 200G
+#SBATCH --clusters=htc
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user sarah.nichols@biology.ox.ac.uk
-#SBATCH --array=1-72%10
+#SBATCH --array=1-72
 
 set -eu
 source /data/biol-bird-parasites/sann7416/wgs-mining-validation/src/.env
@@ -16,7 +16,6 @@ module purge
 module load Kraken2/2.1.1-gompi-2020b
 module load SAMtools/1.16.1-GCC-11.3.0
 module load SeqKit/2.2.0
-module load pear/0.9.11
 
 # List all BAM files in the directory
 BAM_FILES=("$BAM_ZOST_PATH"/paired/*.bam)

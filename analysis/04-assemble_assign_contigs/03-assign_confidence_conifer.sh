@@ -59,7 +59,7 @@ fi
 mkdir -p "$OUTPUT_DIR"
 
 # Define the output file for the final Conifer results
-CONIFER_OUTPUT="$OUTPUT_DIR/conifer_output.tsv"
+CONIFER_OUTPUT="$OUTPUT_DIR/conifer_output_contigs.tsv"
 
 # Move to the directory where Conifer is located
 cd "$CONIFER_SOFTWARE"
@@ -79,7 +79,7 @@ for file in "$KRAKEN_RESULTS"/*.sorted.kraken_output; do
   filename=$(basename "$file")
 
   # Extract the sample ID from the filename
-  sample_id=$(echo $filename | awk '{match($0, /^[A-Za-z]{3}[0-9]{1,2}/, arr); print arr[0]}')
+  sample_id=$(echo "$filename" | awk -F'[_.]' '{print $2}')
 
   echo "Processing file: $filename"
   echo "Sample ID: $sample_id"

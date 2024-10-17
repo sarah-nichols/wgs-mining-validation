@@ -1,0 +1,1 @@
+host_ref_dir=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/wgs-mining/host_reference
