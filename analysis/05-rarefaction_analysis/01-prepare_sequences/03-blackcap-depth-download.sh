@@ -5,6 +5,8 @@
 #SBATCH --error=process_samples_%A_%a.err
 #SBATCH --clusters=all
 #SBATCH --array=1-11
+#SBATCH --time=8:00:00
+#SBATCH --partition=short
 #SBATCH --mem=40G
 #SBATCH --cpus-per-task=8
 
@@ -72,9 +74,11 @@ FILTERED_DATA_DIR="${BLACKCAP_SAMPLES}/filtered_data"
 mkdir -p "$FILTERED_DATA_DIR"
 mkdir -p "$REPORT_DIR"
 
+:<<'COMMENT'
+
 # Step 1: Download FASTQ files using fastq-dump
-#echo "Downloading FASTQ files for accession: $ACCESSION"
-#fastq-dump --split-files --gzip --accession "$ACCESSION" --outdir "$RAW_DATA_DIR"
+echo "Downloading FASTQ files for accession: $ACCESSION"
+fastq-dump --split-files --gzip --accession "$ACCESSION" --outdir "$RAW_DATA_DIR"
 
 
 # Step 2: Preprocess the FASTQ files with FastP (Trimming)
@@ -99,7 +103,7 @@ do
     echo "FastP did not produce expected output files for ${ACCESSION}. Skipping report move."
   fi
 done
-
+COMMENT
 
 # Step 3: Check for existing index files with .fasta extension
 INDEX_PREFIX="${HOST_REF_PATH}"  # Use the full path including .fasta
@@ -118,18 +122,20 @@ else
     fi
 fi
 
-# Step 4: Align filtered reads to the reference genome using BWA
-echo "Aligning reads for ${ACCESSION} to the reference genome"
-bwa mem -t ${SLURM_CPUS_PER_TASK} "$INDEX_PREFIX" \
+# Step 4: Align filtered reads to the reference genome using BWA with read group info
+echo "Aligning reads for ${ACCESSION} to the reference genome with read group"
+
+# Define read group (RG) information for each sample
+RG_ID="ID:${ACCESSION}"
+RG_SM="SM:${ACCESSION}"  # Sample name, which can be the accession
+RG_LB="LB:lib1"          # Library name (you can modify this based on your data)
+RG_PL="PL:ILLUMINA"      # Platform used for sequencing
+RG_PU="PU:unit1"         # Platform unit (you can modify this too)
+
+bwa mem -t ${SLURM_CPUS_PER_TASK} -R "@RG\t$RG_ID\t$RG_SM\t$RG_LB\t$RG_PL\t$RG_PU" "$INDEX_PREFIX" \
     "${FILTERED_DATA_DIR}/Filtered_${ACCESSION}_1.fastq.gz" \
     "${FILTERED_DATA_DIR}/Filtered_${ACCESSION}_2.fastq.gz" | \
     samtools view -bS - > "${RAW_DATA_DIR}/${ACCESSION}.bam"
-
-# Verify if alignment succeeded
-if [ $? -ne 0 ]; then
-    echo "Error: Alignment with BWA failed for ${ACCESSION}."
-    exit 1
-fi
 
 # Step 5: Sort and index the final BAM file
 echo "Sorting and indexing BAM file for ${ACCESSION}"
@@ -143,7 +149,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Optional: Cleanup raw and filtered FASTQ files to save space
-# rm ${RAW_DATA_DIR}/${ACCESSION}_*.fastq.gz
-# rm ${FILTERED_DATA_DIR}/Filtered_${ACCESSION}_*.fastq.gz
+rm ${RAW_DATA_DIR}/${ACCESSION}_*.fastq.gz
+rm ${FILTERED_DATA_DIR}/Filtered_${ACCESSION}_*.fastq.gz
 
 echo "Processing for accession ${ACCESSION} completed"

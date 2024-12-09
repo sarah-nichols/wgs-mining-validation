@@ -1,0 +1,4 @@
+kraken_results=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/rarefaction/own_samples/kraken_contig_output
+kraken_custom_taxid=/data/biol-bird-parasites/sann7416/island-biogeography-wgs-mining/data/reference_database/kraken_custom/taxo.k2d
+conifer_software=/data/biol-bird-parasites/sann7416/island-biogeography-wgs-mining/software/Conifer
+output_directory=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/rarefaction/own_samples

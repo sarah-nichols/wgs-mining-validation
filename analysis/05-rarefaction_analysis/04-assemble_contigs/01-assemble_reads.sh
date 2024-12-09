@@ -8,7 +8,7 @@
 #SBATCH --clusters=all
 #SBATCH --mail-type=ALL
 
-# Script to convert BAM to FASTQ and assemble contigs with metaSPAdes.
+# Script to convert BAM to FASTQ, assemble contigs with metaSPAdes, and bin contigs using MetaBAT2.
 # Usage:
 #   sbatch --array=1-N%M assembly_metaspades.sh <parameters_file>
 
@@ -45,36 +45,39 @@ module load SAMtools/1.16.1-GCC-11.3.0
 module load SPAdes/3.15.3-GCC-11.2.0
 module load BWA/0.7.17-GCCcore-11.2.0
 module load seqtk/1.3-GCC-11.2.0
+module load Anaconda3
+
 
 # Create output directories
 PAIRED_F_FASTQS="$OUTPUT_DIR/paired_fastqs_forward"
 PAIRED_R_FASTQS="$OUTPUT_DIR/paired_fastqs_reverse"
 SPADES_OUTPUT="$OUTPUT_DIR/spades_output"
 UNASSEMBLED_READS="$OUTPUT_DIR/unassembled_reads"
+BINNING_OUTPUT="$OUTPUT_DIR/binning_output"
 
 mkdir -p "$PAIRED_F_FASTQS"
 mkdir -p "$PAIRED_R_FASTQS"
 mkdir -p "$SPADES_OUTPUT"
 mkdir -p "$UNASSEMBLED_READS"
+mkdir -p "$BINNING_OUTPUT"
 
-# List all BAM files in the directory (General pattern for .bam files)
-BAM_FILES=("$BAM_PATH"/*.bam)
+# List all BAM files
+BAM_FILES=("$BAM_PATH"/paired_*.bam)
 NUM_FILES=${#BAM_FILES[@]}
 
-# Validate that BAM files exist
 if [ "$NUM_FILES" -eq 0 ]; then
-    echo "Error: No BAM files found in the directory."
+    echo "Error: No BAM files found."
     exit 1
 fi
 
-# Check if SLURM_ARRAY_TASK_ID is within bounds
+# Use SLURM_ARRAY_TASK_ID to pick the specific file
 INDEX=$((SLURM_ARRAY_TASK_ID - 1))
-if [ "$INDEX" -ge "$NUM_FILES" ]; then
-    echo "Error: SLURM_ARRAY_TASK_ID=$SLURM_ARRAY_TASK_ID is out of bounds (only $NUM_FILES files available)."
+bam_file=${BAM_FILES[$INDEX]}
+
+if [ -z "$bam_file" ]; then
+    echo "Error: No BAM file found for SLURM_ARRAY_TASK_ID=$SLURM_ARRAY_TASK_ID"
     exit 1
 fi
-
-bam_file=${BAM_FILES[$INDEX]}
 
 # Generate FASTQ filenames
 forward_fastq_file="$PAIRED_F_FASTQS/$(basename "${bam_file%.bam}").1.fastq"
@@ -88,7 +91,7 @@ spades_output_path="$SPADES_OUTPUT/$(basename "${bam_file%.bam}")"
 spades.py --meta -1 "$forward_fastq_file" -2 "$reverse_fastq_file" -o "$spades_output_path"
 
 # Step 1: Index the contigs for BWA-MEM
-contigs_file="$SPADES_OUTPUT/$(basename "${bam_file%.bam}")/contigs.fasta"
+contigs_file="$spades_output_path/contigs.fasta"
 bwa index "$contigs_file"
 
 # Step 2: Align reads to contigs using BWA-MEM
@@ -111,3 +114,4 @@ seqtk seq -A "$UNASSEMBLED_READS/$(basename "${bam_file%.bam}").unassembled.2.fa
 combined_fasta="$OUTPUT_DIR/combined_sequences/$(basename "${bam_file%.bam}").combined_sequences.fasta"
 mkdir -p "$(dirname "$combined_fasta")"
 cat "$contigs_file" "$UNASSEMBLED_READS/$(basename "${bam_file%.bam}").unassembled.1.fasta" "$UNASSEMBLED_READS/$(basename "${bam_file%.bam}").unassembled.2.fasta" > "$combined_fasta"
+

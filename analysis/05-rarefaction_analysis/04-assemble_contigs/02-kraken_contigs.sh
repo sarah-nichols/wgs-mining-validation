@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --partition short
 #SBATCH --time=3:00:00
-#SBATCH --mem 180G
+#SBATCH --mem 200G
 #SBATCH --clusters=all
 #SBATCH --mail-type=ALL
 
@@ -43,14 +43,14 @@ module purge
 module load Kraken2/2.1.1-gompi-2020b
 
 # Directory for Kraken2 output
-KRAKEN_OUTPUT="$OUTPUT_DIR/kraken_output"
-KRAKEN_REPORT="$OUTPUT_DIR/kraken_reports"
+KRAKEN_OUTPUT="$OUTPUT_DIR/kraken_contig_output"
+KRAKEN_REPORT="$OUTPUT_DIR/kraken_contig_reports"
 
 mkdir -p "$KRAKEN_OUTPUT"
 mkdir -p "$KRAKEN_REPORT"
 
 # List all assembled contig files (final.contigs.fa)
-CONTIG_FILES=("$OUTPUT_DIR/combined_sequences/"*.sorted.combined_sequences.fasta)
+CONTIG_FILES=("$OUTPUT_DIR/combined_sequences/"*.combined_sequences.fasta)
 NUM_CONTIGS=${#CONTIG_FILES[@]}
 
 if [ "$NUM_CONTIGS" -eq 0 ]; then
@@ -68,11 +68,11 @@ if [ -z "$contig_file" ]; then
 fi
 
 # Extract sample name from contig file path
-sample=$(basename "$(dirname "$contig_file")")
+sample=$(basename "$contig_file" .sorted.combined_sequences.fasta)
 
 # Run Kraken2 classification
 kraken2 --db "$KRAKEN_CUSTOM" \
-    --threads 8 \
+    --threads 16 \
     --use-names \
     --output "$KRAKEN_OUTPUT/$sample.kraken_output" \
     --report "$KRAKEN_REPORT/$sample.kraken_report" \

@@ -42,6 +42,7 @@ while IFS="=" read -r key value; do
     fi
 done < "$PARAMETERS_FILE"
 
+
 # Retrieve the required parameters from the file
 KRAKEN_RESULTS=${PARAMS["kraken_results"]}
 KRAKEN_CUSTOM_TAXID=${PARAMS["kraken_custom_taxid"]}
@@ -54,11 +55,12 @@ if [ -z "$KRAKEN_RESULTS" ] || [ -z "$KRAKEN_CUSTOM_TAXID" ] || [ -z "$OUTPUT_DI
     exit 1
 fi
 
+CONIFER_OUT_DIR="$OUTPUT_DIR/conifer_output"
 # Create the output directory if it doesn't exist
-mkdir -p "$OUTPUT_DIR"
+mkdir -p $CONIFER_OUT_DIR
 
 # Define the output file for the final Conifer results
-CONIFER_OUTPUT="$OUTPUT_DIR/conifer_output/conifer_output_contigs.tsv"
+CONIFER_OUTPUT="$CONIFER_OUT_DIR/conifer_output_contigs.tsv"
 
 # Move to the directory where Conifer is located
 cd "$CONIFER_SOFTWARE"
@@ -67,24 +69,28 @@ cd "$CONIFER_SOFTWARE"
 > "$CONIFER_OUTPUT"
 
 # Print the header line to the output file
-echo -e "sample_id\tclassified\tsequence_name\ttaxon_name\tread_length\tkmer_ids\tmean_c_score\tmeanRTL_score" > "$CONIFER_OUTPUT"
+echo -e "sample_id\tclassified\tread_name\ttaxon_name\tread_length\tbreakdown\tmeanC\tmeanRTL" > "$CONIFER_OUTPUT"
 
 # Loop through all Kraken2 report files in the directory
-for file in "$KRAKEN_RESULTS"/*.sorted.kraken_output; do
-  # Run Conifer on the file with the specified options for extracting length and confidence scores
+for file in "$KRAKEN_RESULTS"/*.kraken_output; do
+  # Run Conifer on the file
   ./conifer --both_scores -i "$file" -d "$KRAKEN_CUSTOM_TAXID" > output.txt
 
   # Get the filename without the path
   filename=$(basename "$file")
 
-  # Extract the sample ID using a more flexible regex pattern
-  sample_id=$(echo "$filename" | awk '{match($0, /[A-Za-z0-9]+/, arr); print arr[0]}')
+  # Extract the sample ID from the filename
+  sample_id=$(echo "$filename" | sed -E 's/^paired_//; s/(^[^.]+).*/\1/')
 
   echo "Processing file: $filename"
   echo "Sample ID: $sample_id"
 
-  # Prepend the sample ID to each line of the Conifer output (excluding the header)
-  awk -v id="$sample_id" 'NR > 1 {print id "\t" $0}' output.txt >> "$CONIFER_OUTPUT"
+  # Add a column for the sample ID to the output file, skipping the header line
+  awk -v id="$sample_id" 'NR>1 {printf("%s\t%s\n", id, $0)}' output.txt > output_with_id.txt
+
+  # Append the output to the final output file
+  cat output_with_id.txt >> "$CONIFER_OUTPUT"
 done
+
 
 echo "Conifer processing complete. Results saved to $CONIFER_OUTPUT."

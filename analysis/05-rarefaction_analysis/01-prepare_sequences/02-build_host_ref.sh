@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
-#SBATCH --partition medium
+#SBATCH --partition short
 #SBATCH --mem=80G
 #SBATCH --clusters=all
 #SBATCH --time=6:00:00
@@ -60,7 +60,7 @@ fi
 echo "Indexing the reference genome using bwa index..."
 bwa index "$HOST_REF_DIR/blackcap_ref_reg.fasta"
 
-echo "BWA index completed"
+#echo "BWA index completed"
 
 # Build host reference index using BwaMemIndexImageCreator
 echo "Building host reference index (IMG)..."
