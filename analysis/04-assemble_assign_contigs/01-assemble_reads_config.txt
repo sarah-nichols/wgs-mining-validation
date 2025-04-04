@@ -1,3 +1,0 @@
-bam_path=/data/biol-bird-parasites/sann7416/island-biogeography-wgs-mining/data/filtered_bams
-output_dir=/data/biol-bird-parasites/sann7416/island-biogeography-wgs-mining/data
-conda_env_path=/data/biol-bird-parasites/sann7416/conda_environments/metabat2
