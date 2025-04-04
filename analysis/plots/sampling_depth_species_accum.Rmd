@@ -1,0 +1,238 @@
+---
+title: "Metabarcoding"
+output: html_notebook
+---
+
+```{r setup, echo=FALSE}
+# Knitr settings: 
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(scipen = 999)
+```
+
+```{r, echo=FALSE}
+source("./src/wgs-mining-validation-source.R")
+```
+
+load in data
+```{r}
+df_conifer_wgs_zost <- read_delim(file.path(data_path, "wgs-mining", "raw", "conifer_rarefaction_silvereye_unassembled.tsv"))
+df_conifer_wgs_blackcap <- read_delim(file.path(data_path, "wgs-mining", "raw", "conifer_rarefaction_blackcap_unassembled.tsv"))
+df_conifer_wgs_contig_zost <- read_delim(file.path(data_path, "wgs-mining", "raw", "conifer_rarefaction_silvereye_assembled.tsv"))
+df_conifer_wgs_contig_blackcap <- read_delim(file.path(data_path, "wgs-mining", "raw", "conifer_rarefaction_blackcap_assembled.tsv"))
+```
+
+```{r}
+# Function for data wrangling with column selection based on dataset name
+wrangle_data <- function(data, dataset_name) {
+  # Create column for taxon_name
+  data <- data %>%
+    mutate(parasite_name = case_when(
+      str_detect(taxon_name, paste(parasite_genera_present, collapse = "|")) ~ 
+        str_extract(taxon_name, paste(parasite_genera_present, collapse = "|")),
+      TRUE ~ NA_character_
+    ))
+  
+  # Work out which column to use for confidence calculation based on the dataset name
+  confidence_col <- if (str_detect(dataset_name, "contig")) "meanRTL" else "RTLA"
+  
+  # Add column for confidence
+  data <- data %>%
+    dplyr::mutate(confidence = case_when(
+      !!sym(confidence_col) >= 0.9 ~ 90,
+      !!sym(confidence_col) >= 0.8 ~ 80,
+      !!sym(confidence_col) >= 0.7 ~ 70,
+      !!sym(confidence_col) >= 0.6 ~ 60,
+      !!sym(confidence_col) >= 0.5 ~ 50,
+      !!sym(confidence_col) >= 0.4 ~ 40,
+      !!sym(confidence_col) >= 0.3 ~ 30,
+      !!sym(confidence_col) >= 0.2 ~ 20,
+      !!sym(confidence_col) >= 0.1 ~ 10,
+      !!sym(confidence_col) >= 0 ~ 0,
+      TRUE ~ NA_real_
+    )) %>%
+    dplyr::select(sample_id, parasite_name, confidence) %>%
+    dplyr::filter(confidence %in% c(0, 20, 70)) %>%
+    group_by(sample_id) %>%
+    distinct() %>%
+    drop_na() %>%
+    dplyr::mutate(
+      depth = as.numeric(sub(".*_X([0-9]+)", "\\1", sample_id)),
+      sample_id = sub("_X[0-9]+", "", sample_id)
+    ) %>%
+    group_by(sample_id, depth, confidence, parasite_name) %>%
+    summarise(count = n(), .groups = "drop") %>%
+    spread(parasite_name, count, fill = 0)
+  
+  # Convert sample_id and confidence to factors
+  data$sample_id <- as.factor(data$sample_id)
+  data$confidence <- as.factor(data$confidence)
+  
+  return(data)
+}
+
+datasets <- list(
+  df_conifer_wgs_zost = df_conifer_wgs_zost,
+  df_conifer_wgs_blackcap = df_conifer_wgs_blackcap,
+  df_conifer_wgs_contig_zost = df_conifer_wgs_contig_zost,
+  df_conifer_wgs_contig_blackcap = df_conifer_wgs_contig_blackcap
+)
+
+# Wrangle data
+wrangled_datasets <- lapply(names(datasets), function(name) {
+  wrangle_data(datasets[[name]], name)
+})
+
+# assign back to orignal dataset name
+df_conifer_wgs_zost <- wrangled_datasets[[1]]
+df_conifer_wgs_blackcap <- wrangled_datasets[[2]]
+df_conifer_wgs_contig_zost <- wrangled_datasets[[3]]
+df_conifer_wgs_contig_blackcap <- wrangled_datasets[[4]]
+
+
+# Make list of datasets to process
+datasets <- list(
+  df_conifer_wgs_zost = df_conifer_wgs_zost,
+  df_conifer_wgs_blackcap = df_conifer_wgs_blackcap,
+  df_conifer_wgs_contig_zost = df_conifer_wgs_contig_zost,
+  df_conifer_wgs_contig_blackcap = df_conifer_wgs_contig_blackcap
+)
+```
+
+
+```{r}
+get_species_columns <- function(data) {
+  data %>%
+    dplyr::select(-c(sample_id, confidence, depth))
+}
+
+ # make palette for plot
+combined_palette <- c(
+   "0.assembled" = assembled_pal[3], "20.assembled" = assembled_pal[2], "70.assembled" = assembled_pal[1],
+   "0.unassembled" = unassembled_pal[3], "20.unassembled" = unassembled_pal[2], "70.unassembled" = unassembled_pal[1]
+)
+
+plot_species_accumulation <- function(datasets) {
+  
+  dataset_titles <- c(
+    df_conifer_wgs_zost = "D) Paired-end: silvereye",
+    df_conifer_wgs_blackcap = "C) Paired-end: blackcaps",
+    df_conifer_wgs_contig_zost = "B) Assembled: silvereye",
+    df_conifer_wgs_contig_blackcap = "A) Assembled: blackcaps"
+  )
+  
+  all_data_combined <- list()
+  
+  # Process each dataset
+  for (dataset_name in names(datasets)) {
+    data <- datasets[[dataset_name]]
+    
+    # Skip if dataset is empty or missing confidence column
+    if (nrow(data) == 0 || !"confidence" %in% colnames(data)) {
+      warning(paste("Dataset", dataset_name, "is empty or missing the 'confidence' column. Skipping."))
+      next
+    }
+    
+    # Ensure confidence is a factor with expected levels
+    data$confidence <- factor(data$confidence, levels = c("0", "20", "70"))
+    
+    unique_confidences <- unique(data$confidence)
+    accum_data_list <- list()
+    
+    # Check if dataset is assembled or unassembled for color mapping
+    palette_type <- if (grepl("contig", dataset_name)) "assembled" else "unassembled"
+    
+    for (i in seq_along(unique_confidences)) {
+      group_data <- data[data$confidence == unique_confidences[i], ]
+      if (nrow(group_data) == 0) next
+      group_data <- group_data[order(group_data$depth), ]
+      species <- get_species_columns(group_data)
+      depth_ordered <- group_data$depth
+      site_accum <- specaccum(species, method = "random")
+      lower_ci <- site_accum$richness - 1.96 * site_accum$sd
+      upper_ci <- site_accum$richness + 1.96 * site_accum$sd
+      
+      site_df <- data.frame(
+        Dataset = dataset_name,
+        Site = unique_confidences[i],
+        Effort = depth_ordered,
+        Richness = site_accum$richness,
+        Lower = lower_ci,
+        Upper = upper_ci,
+        Title = dataset_titles[dataset_name],
+        palette_type = palette_type
+      )
+      
+      accum_data_list[[i]] <- site_df
+    }
+    
+    if (length(accum_data_list) > 0) {
+      dataset_combined <- bind_rows(accum_data_list)
+      all_data_combined[[dataset_name]] <- dataset_combined
+    }
+  }
+  
+  if (length(all_data_combined) == 0) {
+    stop("No data to plot after processing all datasets.")
+  }
+  
+  combined_accum_data <- bind_rows(all_data_combined)
+  
+  # Get the last unique point for each line for labeling
+  label_data <- combined_accum_data %>%
+    group_by(Dataset, Site, palette_type) %>%
+    filter(Effort == max(Effort)) %>%
+    distinct(Site, .keep_all = TRUE) %>% 
+    ungroup()
+  
+  # Generate plot
+  ggplot(combined_accum_data, aes(
+    x = Effort, y = Richness, color = interaction(Site, palette_type),
+    fill = interaction(Site, palette_type), group = interaction(Dataset, Site)
+  )) +
+    geom_ribbon(aes(ymin = Lower, ymax = Upper), alpha = 0.2, color = NA) +
+    geom_line(size = 1.5) +
+    geom_text_repel(data = label_data, aes(label = paste(Site, "%"), color = interaction(Site, palette_type)),
+                    nudge_x = 1, direction = "y", hjust = 0, size = 5, show.legend = FALSE) +
+    labs(
+      title = "", 
+      x = "Sequencing Depth", 
+      y = "Cumulative Richness (genera)"
+    ) +
+    scale_x_continuous(limits = c(0, 60), breaks = c(0, 10, 20, 30, 40, 50, 60)) +
+    scale_y_continuous(limits = c(0, 50), expand = expansion(mult = c(0.1, 0.1))) +
+    scale_color_manual(values = combined_palette) +
+    scale_fill_manual(values = combined_palette) +
+    facet_wrap(~ Title, scales = "free", nrow = 2) +  
+    theme_minimal() +
+    theme(
+      axis.line = element_line(colour = "black"),
+      axis.text.x = element_text(size = 16),
+      panel.grid = element_blank(),
+      text = element_text(size = 20),
+      legend.title = element_text(size = 16),
+      legend.title.align = 0.5,
+      legend.text = element_text(size = 12),
+      strip.text = element_text(size = 16, face = "bold", hjust = 0),
+      strip.placement = "outside",
+      plot.margin = margin(15, 15, 15, 15),
+      panel.spacing = unit(2, "lines"),  
+      legend.position = "none",
+      strip.background = element_blank()
+    )
+}
+
+
+p1 <- plot_species_accumulation(datasets)
+
+print(p1)
+```
+
+```{r}
+ggplot2::ggsave(file.path(figures_path, "species_accumulation_curve.png"), 
+                p1,
+                width = 28,
+                height = 22,
+                units = c("cm"))
+```
+

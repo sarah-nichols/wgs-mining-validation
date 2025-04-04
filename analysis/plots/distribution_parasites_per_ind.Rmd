@@ -14,67 +14,203 @@ options(scipen = 999)
 source("./src/wgs-mining-validation-source.R")
 ```
 
+load in data
 ```{r}
-df <- read.csv(file.path(data_path, "wrangled", "full_data.csv"))
+df_metabarcoding <- read_csv(file.path(data_path, "wgs-mining", "wrangled", "df_metabarcoding_long.csv"))
 sample_info <- read.csv(file.path(data_path, "sample-info", "df-migrant-miseq.csv"))
+df_slides <- read_csv(file.path(data_path, "wgs-mining", "wrangled", "df_slides_long.csv"))
+df_pcr <- read_csv(file.path(data_path, "wgs-mining", "wrangled", "df_pcr_long.csv"))
+df_unassembled <- read.csv(file.path(data_path, "wgs-mining", "wrangled", "df_unassembled_wgs_mining.csv"))
+df_assembled <- read.csv(file.path(data_path, "wgs-mining", "wrangled", "df_assembled_wgs_mining.csv"))
+```
+wrangle metabarcoding data
+```{r}
+df_metabarcoding_inf_per_ind <- df_metabarcoding %>%
+  mutate(count = if_else(count > 0, 1, 0)) %>%
+  select(ID, count) %>% 
+  group_by(ID) %>%
+  summarise(n = sum(count)) %>%
+  drop_na() %>% 
+  mutate(method = "A) Metabarcoding")
+```
 
+wrangle wgs data
+```{r}
+df_wgs_unassembled_inf_per_ind <- df_unassembled %>%
+  filter(confidence >= 70) %>%
+  select(sample_id, parasite_name) %>% 
+  distinct() %>%
+  group_by(sample_id) %>%
+  tally() %>%
+  drop_na() %>% 
+  dplyr::rename(ID = sample_id) %>%
+  left_join(sample_info, ., by = "ID") %>%
+  mutate(n = replace_na(n, 0)) %>%
+  drop_na() %>%
+  select(ID, n) %>%
+mutate(method = "B) WGS paired-end 70%")
 ```
 
 ```{r}
-df_wgs <- df %>%
-  filter(method == "WGS mining") %>%
-  group_by(ID, method) %>% 
-  tally()
-
-df_meta <- df %>%
-  filter(method == "Metabarcoding") %>%
-  group_by(ID, method) %>% 
-  tally()
-
-df_meta_kraken <- df %>%
-  filter(method == "Metabarcoding Kraken") %>%
-  group_by(ID, method) %>% 
-  tally()
+df_wgs_assembled_inf_per_ind <- df_assembled %>%
+  filter(confidence >= 20) %>%
+  select(sample_id, parasite_name) %>% 
+  distinct() %>%
+  group_by(sample_id) %>%
+  tally() %>%
+  drop_na() %>% 
+  dplyr::rename(ID = sample_id) %>%
+  left_join(sample_info, ., by = "ID") %>%
+  mutate(n = replace_na(n, 0)) %>%
+  drop_na() %>%
+  select(ID, n) %>%
+mutate(method = "C) WGS assembled 20%")
 ```
 
+combine datasets
 ```{r}
-df_0_wgs_mining <- sample_info %>%
-  dplyr::filter(ID %!in% df_wgs$ID) %>%
-  select(ID) %>%
-  mutate(method = "WGS mining", n = 0)
-
-df_0_metabarcoding <- sample_info %>%
-  filter(ID %!in% df_meta$ID) %>%
-  select(ID) %>%
-  mutate(method = "Metabarcoding", n = 0)
-
-df_0_metabarcoding_kraken <- sample_info %>%
-  filter(ID %!in% df_meta_kraken$ID) %>%
-  select(ID) %>%
-  mutate(method = "Metabarcoding Kraken", n = 0)
-
-df_plot <- rbind(df_0_wgs_mining, df_0_metabarcoding, df_0_metabarcoding_kraken, df_meta, df_wgs, df_meta_kraken) 
+df_plot <- rbind(df_metabarcoding_inf_per_ind, df_wgs_assembled_inf_per_ind, df_wgs_unassembled_inf_per_ind)
 ```
 
-
+check same sample number for each dataset
 ```{r}
-p1 <- 
-  ggplot(df_plot, aes(x = n)) +
-            geom_bar(binwidth = 1, position = "dodge", fill = palette[5], color = "black") +
-  aes(y = ..count..) +
-  facet_wrap( ~ method, ncol =1)+
-  scale_x_continuous(name ="Number of parasites detected per individual", breaks = c(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16))+
+check <- df_plot %>%
+  group_by(method) %>%
+  tally() %>%
+  arrange(desc(n))
+```
+
+set colour palette for methods
+```{r}
+df_plot$method <- factor(df_plot$method, levels = c(
+  "A) Metabarcoding",
+  "B) WGS paired-end 70%",
+  "C) WGS assembled 20%"
+))
+
+plot_palette <- c(
+  "A) Metabarcoding" = methods_pal[3],  
+  "B) WGS paired-end 70%" = unassembled_pal[3],
+  "C) WGS assembled 20%" = assembled_pal[2] 
+)
+```
+
+plot
+```{r}
+p1 <- ggplot(df_plot, aes(x = n)) +
+  geom_histogram(stat = "count", binwidth = 1, alpha = 0.7, fill = "#79706EFF", color = "#79706EFF") +
+  facet_wrap(~ method, ncol = 1, scales = "free_x") +  
+  scale_x_continuous(
+    limits = c(-0.5,8),
+    name = "Number of parasite genera detected per individual", 
+    breaks = seq(0, 8, by = 1) 
+  ) +  
   ylab("Number of individuals") +
-    theme_minimal()
+  xlab("Number of Parasite Genera Detected") +
+  scale_fill_manual(
+    name = "Detection Method",
+    values = plot_palette
+  ) +
+  scale_color_manual(
+    name = "Detection Method",
+    values = plot_palette
+  ) +
+    theme_minimal() +
+    theme(
+      axis.line = element_line(colour = "black"),
+      axis.text.x = element_text(size = 16),
+      panel.grid = element_blank(),
+      text = element_text(size = 20),
+      legend.title = element_text(size = 16),
+      legend.title.align = 0.5,
+      legend.text = element_text(size = 12),
+      strip.text = element_text(size = 16, face = "bold", hjust = 0),
+      strip.placement = "outside",
+      plot.margin = margin(15, 15, 15, 15),
+      panel.spacing = unit(2, "lines"),  
+      legend.position = "none",
+      strip.background = element_blank()
+    )
 
 p1
 ```
+
+save plot
 ```{r}
-ggplot2::ggsave(file.path(figures_path, "Figure3.png"), 
+ggplot2::ggsave(file.path(figures_path, "Figure6.png"), 
                 p1,
-                width = 10,
-                height = 12,
+                width = 18,
+                height = 25,
                 units = c("cm"))
 ```
 
+prepare data for correlation plot
+```{r}
+df_slides_method <- df_slides %>%
+  group_by(ID) %>%
+  summarise(n = sum(infected)) %>%
+    mutate(method = "Slides") %>%
+  dplyr::select(ID, n, method)
+
+
+df_pcr_method <- df_pcr %>%
+  group_by(ID) %>%
+  summarise(n = sum(infected)) %>%
+    mutate(method = "PCR") %>%
+  dplyr::select(ID, n, method)
+
+df_corr <- df_plot %>%
+  rbind(., df_pcr_method, df_slides_method) %>%
+  pivot_wider(names_from = "method", values_from = n) %>%
+    drop_na()
+
+```
+
+make corr matrix
+```{r}
+x_vars <- pivot_longer(data = df_corr,
+             cols = `Metabarcoding`:`Slides`,
+             names_to = "variable_x",
+             values_to = "x")
+
+
+y_vars <- pivot_longer(data = df_corr,
+             cols = `Metabarcoding`:`Slides`,
+             names_to = "variable_y",
+             values_to = "y")
+```
+
+plot subset of correlations
+```{r}
+target_vars <- c("Assembled 20%", "Paired-end 70%")
+
+filtered_data <- full_join(x_vars, y_vars, 
+                           by = c("ID"), 
+                           relationship = "many-to-many") %>%
+  filter(variable_x %in% target_vars)
+
+
+p2 <- ggplot(filtered_data) + 
+  aes(x = x, y = y) +
+  geom_point(position = position_jitter(width = 0.2, height = 0.2), aes(alpha = 0.001), color = "#79706EFF") +
+  geom_smooth(method = "lm", color = "#79706EFF", fill = "#79706EFF") +
+  stat_cor(method = "pearson", p.digits = 3, p.accuracy = 0.001) +
+  facet_grid(variable_y ~ variable_x, scales = "free") +
+  theme_classic() +
+  labs(x = "Number of parasites detected per individual",
+       y = "Number of parasites detected per individual") +
+  theme(legend.position = "none")
+
+p2
+
+```
+
+save
+```{r}
+ggplot2::ggsave(file.path(figures_path, "correlation_methods.png"), 
+                p2,
+                width = 24,
+                height = 24,
+                units = c("cm"))
+```
 

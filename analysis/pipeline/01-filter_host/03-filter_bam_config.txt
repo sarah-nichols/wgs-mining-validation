@@ -1,0 +1,4 @@
+sample_ids_file=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/sample-info/novogene_sample_paths.txt
+host_hss=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/wgs-mining/host_reference/Zlat_host_reference.hss
+host_img=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/wgs-mining/host_reference/Zlat_host_reference.img
+output_directory=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/wgs-mining/silvereyes

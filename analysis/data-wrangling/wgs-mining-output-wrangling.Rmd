@@ -1,0 +1,114 @@
+---
+title: "wgs-mining-output-wrangling"
+output: html_notebook
+---
+
+```{r setup, echo=FALSE}
+# Knitr settings: 
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(scipen = 999)
+```
+
+```{r, echo=FALSE}
+source("./src/wgs-mining-validation-source.R")
+```
+
+load in data
+```{r}
+df_unassembled <- read_delim(file.path(data_path, "wgs-mining", "raw", "conifer_output_6.txt"))
+
+df_assembled <- read_delim(file.path(data_path, "wgs-mining", "raw", "conifer_output_contigs.tsv"))
+
+taxids_not_interested <- read_table(file.path(data_path, "wgs-mining", "raw", "taxids_not_interested.txt"), col_names = FALSE)
+colnames(taxids_not_interested) <- "taxid"
+
+not_parasites <- read_csv(file.path(data_path, "wgs-mining", "raw", "not_parasite_list.csv"), col_names = FALSE)
+colnames(not_parasites) <- "taxname"
+
+```
+wrangle data to add parasite genera in clean format, transmission mode, host and confidence + remove those that are not parasites
+```{r}
+df_names_unassembled <- df_unassembled %>%
+  mutate(parasite_name = case_when(
+    str_detect(taxon_name, paste(parasite_genera_present, collapse = "|")) ~ 
+      str_extract(taxon_name, paste(parasite_genera_present, collapse = "|")),
+    TRUE ~ NA)) %>%
+  mutate(transmission_mode = str_replace_all(parasite_name, pattern = transmission_modes_dict)) %>%
+  mutate(host = str_replace_all(parasite_name, pattern = recorded_dict)) %>%
+  dplyr::select(., -taxon_name) %>%
+  filter(!is.na(parasite_name)) %>%
+    mutate(confidence = case_when(
+    RTL50 >= 0.9 ~ 90,
+    RTL50 >= 0.8 ~ 80,
+    RTL50 >= 0.7 ~ 70,
+    RTL50 >= 0.6 ~ 60,
+    RTL50 >= 0.5 ~ 50,
+    RTL50 >= 0.4 ~ 40,
+    RTL50 >= 0.3 ~ 30,
+    RTL50 >= 0.2 ~ 20,
+    RTL50 >= 0.1 ~ 10,
+    RTL50 >= 0 ~ 0
+  ))
+
+df_names_assembled <- df_assembled %>%
+  mutate(parasite_name = case_when(
+    str_detect(taxon_name, paste(parasite_genera_present, collapse = "|")) ~ 
+      str_extract(taxon_name, paste(parasite_genera_present, collapse = "|")),
+    TRUE ~ NA)) %>%
+  mutate(transmission_mode = str_replace_all(parasite_name, pattern = transmission_modes_dict)) %>%
+  mutate(host = str_replace_all(parasite_name, pattern = recorded_dict)) %>%
+  dplyr::select(., -taxon_name) %>%
+  filter(!is.na(parasite_name)) %>%
+  mutate(confidence = case_when(
+    meanRTL_score >= 0.9 ~ 90,
+    meanRTL_score >= 0.8 ~ 80,
+    meanRTL_score >= 0.7 ~ 70,
+    meanRTL_score >= 0.6 ~ 60,
+    meanRTL_score >= 0.5 ~ 50,
+    meanRTL_score >= 0.4 ~ 40,
+    meanRTL_score >= 0.3 ~ 30,
+    meanRTL_score >= 0.2 ~ 20,
+    meanRTL_score >= 0.1 ~ 10,
+    meanRTL_score >= 0 ~ 0
+  ))
+```
+
+checks if there are any genera that need to be researched
+```{r}
+df_check_unassembled <- df_unassembled %>%
+  mutate(parasite_name = case_when(
+    str_detect(taxon_name, paste(parasite_genera_present, collapse = "|")) ~ 
+      str_extract(taxon_name, paste(parasite_genera_present, collapse = "|")),
+    TRUE ~ NA)) %>%
+  filter(is.na(parasite_name)) %>%
+    filter(!(taxid %in% taxids_not_interested$taxid)) %>%
+  mutate(tax_rank = taxid2rank(taxid, db = "ncbi")) %>%
+  filter(tax_rank == "genus" | tax_rank == "species") %>%
+  distinct(taxid, .keep_all = TRUE) %>%
+  filter(!str_detect(tolower(taxon_name), "uncultured")) %>% 
+  filter(!(taxon_name %in% not_parasites$taxname)) 
+
+df_check_assembled <- df_assembled %>%
+  mutate(parasite_name = case_when(
+    str_detect(taxon_name, paste(parasite_genera_present, collapse = "|")) ~ 
+      str_extract(taxon_name, paste(parasite_genera_present, collapse = "|")),
+    TRUE ~ NA),
+        taxid = str_extract(taxon_name, "(?<=taxid )\\d+")  
+  ) %>%
+  filter(is.na(parasite_name)) %>%
+    filter(!(taxid %in% taxids_not_interested$taxid)) %>%
+  mutate(tax_rank = taxid2rank(taxid, db = "ncbi")) %>%
+  filter(tax_rank == "genus" | tax_rank == "species") %>%
+  distinct(taxid, .keep_all = TRUE) %>%
+  filter(!str_detect(tolower(taxon_name), "uncultured")) %>% 
+  filter(!(taxon_name %in% not_parasites$taxname)) %>%
+  filter(meanRTL_score > 0.2)
+
+```
+
+```{r}
+write_csv(df_names_unassembled, file.path(data_path, "wgs-mining", "wrangled", "df_unassembled_wgs_mining.csv"))
+write_csv(df_names_assembled, file.path(data_path, "wgs-mining", "wrangled", "df_assembled_wgs_mining.csv"))
+```
+

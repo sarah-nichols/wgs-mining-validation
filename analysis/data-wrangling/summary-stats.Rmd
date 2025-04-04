@@ -1,0 +1,71 @@
+---
+title: "results_overview"
+output: html_notebook
+---
+
+```{r setup, echo=FALSE}
+# Knitr settings: 
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(scipen = 999)
+```
+
+```{r, echo=FALSE}
+source("./src/wgs-mining-validation-source.R")
+```
+
+
+```{r}
+df_metabarcoding <- read_csv(file.path(data_path, "wgs-mining", "wrangled", "df_metabarcoding_long.csv"))
+sample_info <- read.csv(file.path(data_path, "sample-info", "df-migrant-miseq.csv"))
+df_slides <- read_csv(file.path(data_path, "wgs-mining", "wrangled", "df_slides_wide.csv"))
+df_pcr <- read_csv(file.path(data_path, "wgs-mining", "wrangled", "df_pcr_wide.csv"))
+df_unassembled <- read.csv(file.path(data_path, "wgs-mining", "wrangled", "df_unassembled_wgs_mining.csv"))
+```
+
+```{r}
+df_metabarcoding_info <- df_metabarcoding %>%
+  mutate(transmission_mode = str_replace_all(parasite, pattern = transmission_modes_dict)) %>%
+  mutate(host = str_replace_all(parasite, pattern = recorded_dict))
+
+
+summary <- df_metabarcoding_info %>%
+  group_by(parasite, host, transmission_mode) %>%
+  summarise(total_count = sum(count, na.rm = TRUE)) %>%  # Ignore NA values in the count column
+  arrange(desc(total_count))
+```
+
+how many parasites detected by wgs mining
+```{r}
+df_unassembled_count <- df_unassembled %>%
+  select(parasite_name) %>%
+  distinct()
+```
+
+```{r}
+df_assembled_count <- df_assembled %>%
+  select(parasite_name) %>%
+  distinct()
+```
+
+
+infection prevalences for slides
+```{r}
+infection_counts <- colSums(df_slides[, c(-1:-2)]) # Sum each column, excluding ID column
+total_samples <- nrow(df_slides)
+infection_percentages <- (infection_counts / total_samples) * 100
+
+infection_percentages
+
+
+```
+
+infection prevalences for pcr
+```{r}
+infection_counts <- colSums(df_pcr[, c(-1,-2)]) # Sum each column, excluding ID column
+total_samples <- nrow(df_pcr)
+infection_percentages <- (infection_counts / total_samples) * 100
+
+infection_percentages
+```
+

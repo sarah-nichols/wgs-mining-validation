@@ -1,0 +1,3 @@
+input_reg=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/wgs-mining/host_reference/Reg_Zlat_2_Tgut_pseudochromosomes.fasta
+output_img=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/wgs-mining/host_reference/Zlat_host_reference.img
+output_hss=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/wgs-mining/host_reference/Zlat_host_reference.hss

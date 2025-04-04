@@ -1,0 +1,35 @@
+---
+title: "parasites_detected_per_method"
+output: html_notebook
+---
+
+```{r setup, echo=FALSE}
+# Knitr settings: 
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(scipen = 999)
+```
+
+```{r, echo=FALSE}
+source("./src/wgs-mining-validation-source.R")
+```
+
+```{r}
+df_coverage <- read_delim(file.path(data_path, "wrangled", "mean_coverage_summary.tsv"))
+```
+
+```{r}
+png(filename = file.path(figures_path, "mean_coverage.png"), 
+    width = 20, height = 13, units = "cm", res = 300)
+
+hist(df_coverage$Mean_Coverage, 
+     main = "",
+     xlab = "Mean Coverage",
+     ylab = "Number of samples",
+     breaks = 15)
+
+dev.off()
+
+```
+
+

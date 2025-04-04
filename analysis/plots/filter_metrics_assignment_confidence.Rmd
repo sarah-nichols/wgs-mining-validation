@@ -1,0 +1,154 @@
+---
+title: "filter_metrics_assignment_confidence"
+output: html_notebook
+---
+```{r setup, echo=FALSE}
+# Knitr settings: 
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(scipen = 999)
+```
+
+```{r, echo=FALSE}
+source("./src/wgs-mining-validation-source.R")
+```
+
+```{r}
+df_filter_metrics <- read.delim(file.path(data_path, "wgs-mining", "raw", "extracted_metrics.tsv"))
+df_assembled_metrics <- read.delim(file.path(data_path, "wgs-mining", "raw", "extracted_assembled_kraken_reads.tsv"))
+df_unassembled_metrics <- read.delim(file.path(data_path, "wgs-mining", "raw", "extracted_unassembled_kraken_reads.tsv"))
+```
+
+```{r}
+
+# make data long for plotting
+data_long <- df_filter_metrics %>%
+  select(SAMPLE_NAME, PRIMARY_READS, READS_AFTER_PREALIGNED_HOST_FILTER, 
+         READS_AFTER_QUALITY_AND_COMPLEXITY_FILTER, FINAL_PAIRED_READS) %>%
+  pivot_longer(cols = -SAMPLE_NAME, 
+               names_to = "Metric", 
+               values_to = "Reads")
+
+# ordering x axis
+data_long$Metric <- factor(data_long$Metric, levels = c(
+  "PRIMARY_READS", 
+  "READS_AFTER_PREALIGNED_HOST_FILTER", 
+  "READS_AFTER_QUALITY_AND_COMPLEXITY_FILTER", 
+  "FINAL_PAIRED_READS"
+))
+
+# custom labels for x axis
+custom_labels <- c(
+  "PRIMARY_READS" = "Primary Reads", 
+  "READS_AFTER_PREALIGNED_HOST_FILTER" = "After Host Filter", 
+  "READS_AFTER_QUALITY_AND_COMPLEXITY_FILTER" = "After Quality Filter", 
+  "FINAL_PAIRED_READS" = "Final Paired Reads"
+)
+
+# Calculate means for reporting
+metric_means <- data_long %>%
+  group_by(Metric) %>%
+  summarize(mean_reads = mean(Reads))
+
+# plot
+p1 <- ggplot(data_long, aes(x = Metric, y = Reads)) +
+  geom_violin(trim = FALSE, fill = "grey", color = "grey", alpha = 0.5) +
+  geom_jitter(width = 0.2, size = 1.5, alpha = 0.5) + 
+  scale_y_log10(labels = scales::comma) + 
+  scale_x_discrete(labels = custom_labels) + 
+  labs(title = "",
+       x = "Processing Stage",
+       y = "Read Counts (Log10 Scale)") +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 16),  
+    axis.text.y = element_text(size = 16),  
+    axis.title.x = element_text(size = 16, face = "bold"),  
+    axis.title.y = element_text(size = 16, face = "bold"),  
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),  
+    strip.text = element_text(size = 16, face = "bold"),  
+    strip.background = element_blank(), 
+  )
+
+p1
+```
+
+
+```{r}
+# Add a column indicating the source of each dataset
+unassembled_data <- df_unassembled_metrics %>% 
+  mutate(Source = "Paired-end")
+assembled_data <- df_assembled_metrics %>% 
+  mutate(Source = "Assembled")
+
+# Combine the two datasets into one
+combined_data <- bind_rows(unassembled_data, assembled_data)
+
+# Make data long for plotting
+data_long <- combined_data %>%
+  pivot_longer(cols = c(UNIDENTIFIED_READS, IDENTIFIED_READS), 
+               names_to = "Classified", 
+               values_to = "Reads")
+
+# calculate summary to report
+metric_means <- data_long %>%
+  group_by(Source, Classified) %>%
+  summarize(mean_reads = mean(Reads))
+
+# define custom labels
+custom_labels <- c(
+  "IDENTIFIED_READS" = "Identified Reads", 
+  "UNIDENTIFIED_READS" = "Unidentified Reads"
+)
+
+# plot
+p2 <- ggplot(data_long, aes(x = Classified, y = Reads)) + 
+ geom_violin(trim = FALSE, alpha = 0.5, color = "grey", fill = "grey") +
+  geom_jitter(width = 0.2, size = 1.5, alpha = 0.8) +
+  scale_y_log10(labels = scales::comma) + 
+  facet_wrap(~Source, scales = "free_y") + 
+    scale_x_discrete(labels = custom_labels) + 
+  labs(title = "",
+       x = "Read Type and Dataset",
+       y = "Read Counts (Log10 Scale)",
+       fill = "Read Classification") + 
+  #scale_fill_manual(values = c("Assembled" = assembled_pal[1], "Paired-end" = unassembled_pal[1])) +
+  #scale_color_manual(values = c("Assembled" = assembled_pal[1], "Paired-end" = unassembled_pal[1])) +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 16),  
+    axis.text.y = element_text(size = 16), 
+    axis.title.x = element_text(size = 16, face = "bold"),  
+    axis.title.y = element_text(size = 16, face = "bold"),  
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5), 
+    strip.text = element_text(size = 16, face = "bold"),  
+    strip.background = element_blank(), 
+  )
+
+p2
+
+```
+
+```{r}
+combined_plot <- p1 / 
+  plot_spacer() / 
+  p2 + 
+  plot_layout(ncol = 1, heights = c(1, 0.1, 1)) + 
+  plot_annotation(tag_levels = 'A', tag_suffix = ")") &  
+  theme(plot.tag = element_text(size = 20, face = "bold"))
+
+```
+
+```{r}
+combined_plot
+```
+```{r}
+ggplot2::ggsave(file.path(figures_path, "filtering_kraken_metrics.png"), 
+                combined_plot,
+                width = 28,
+                height = 32,
+                units = c("cm"))
+```
+

@@ -1,0 +1,49 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r setup, echo=FALSE}
+# Knitr settings: 
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(scipen = 999)
+```
+
+```{r, echo=FALSE}
+source("./src/wgs-mining-validation-source.R")
+```
+
+```{r}
+df_conifer_contigs <- read_csv(file.path(data_path, "wgs-mining", "wrangled", "df_assembled_wgs_mining.csv"))
+df_conifer_paired <- read_csv(file.path(data_path, "wgs-mining", "wrangled", "df_unassembled_wgs_mining.csv"))
+
+```
+
+
+```{r}
+p1 <- ggplot(data = df_conifer_contigs, aes(x = read_length, y = meanRTL_score)) +
+  geom_point(alpha = 0.8, size = 3, color = "grey") +
+  scale_color_manual(values = "grey") +
+    labs(
+    title = "",
+    x = "Read length (bp)",
+    y = "Confidence according to Conifer (RTL score)",
+    color = "Parasite Genera")+
+    theme_classic() +
+  guides(alpha = 0.8)+
+  theme(legend.position = "right",
+                text = element_text(size = 15),
+        legend.text = element_text(size = 15, face = "italic"))
+
+p1
+```
+
+```{r}
+ggplot2::ggsave(file.path(figures_path, "read_length_by_confidence.png"), 
+                p1,
+                width = 24,
+                height = 12,
+                units = c("cm"))
+
+```

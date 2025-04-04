@@ -15,10 +15,60 @@ source("./src/wgs-mining-validation-source.R")
 ```
 
 ```{r}
-# Load the data
-df_all_methods <- read_csv(file.path(data_path, "wrangled", "full_data.csv"))
+df_metabarcoding <- read_csv(file.path(data_path, "wgs-mining", "wrangled", "df_metabarcoding_long.csv"))
+sample_info <- read.csv(file.path(data_path, "sample-info", "df-migrant-miseq.csv"))
+df_slides <- read_csv(file.path(data_path, "wgs-mining", "wrangled", "df_slides_long.csv"))
+df_pcr <- read_csv(file.path(data_path, "wgs-mining", "wrangled", "df_pcr_long.csv"))
+df_unassembled <- read.csv(file.path(data_path, "wgs-mining", "wrangled", "df_unassembled_wgs_mining.csv"))
+df_assembled <- read.csv(file.path(data_path, "wgs-mining", "wrangled", "df_assembled_wgs_mining.csv"))
+```
+wrangle metabarcoding data
+```{r}
+df_metabarcoding_parasites <- df_metabarcoding %>%
+  filter(count > 0) %>%
+  select(ID, parasite) %>% 
+  dplyr::rename("parasite_name" = "parasite") %>%
+  mutate(method = "Metabarcoding")
 ```
 
+wrangle wgs data
+```{r}
+df_wgs_unassembled_parasites <- df_unassembled %>%
+  filter(confidence >= 70) %>%
+  select(sample_id, parasite_name) %>% 
+  dplyr::rename("ID" = "sample_id") %>%
+  distinct() %>%
+  drop_na() %>%
+mutate(method = "WGS paired-end 70%")
+```
+
+```{r}
+df_wgs_assembled_parasites <- df_assembled %>%
+  filter(confidence >= 20) %>%
+  select(sample_id, parasite_name) %>% 
+  distinct() %>%
+    dplyr::rename("ID" = "sample_id") %>%
+  drop_na() %>%
+mutate(method = "WGS assembled 20%")
+```
+
+```{r}
+df_pcr_parasites <- df_pcr %>%
+  filter(infected > 0) %>%
+  select(ID, parasite_name) %>% 
+  mutate(method = "PCR")
+```
+
+```{r}
+df_slides_parasites <- df_slides %>%
+  filter(infected > 0) %>%
+  select(ID, parasite_name) %>% 
+  mutate(method = "Slides")
+```
+
+```{r}
+df_all_methods <- rbind(df_metabarcoding_parasites, df_wgs_unassembled_parasites, df_wgs_assembled_parasites, df_pcr_parasites, df_slides_parasites)
+```
 
 ```{r}
 # Create a unique identifier for each combination of parasite_name and method
@@ -26,17 +76,30 @@ data_summary <- df_all_methods %>%
   group_by(method, parasite_name) %>%
   summarise(num_samples = n_distinct(ID)) %>%
   ungroup()
+
+detected_across_methods <- data_summary %>%
+  group_by(parasite_name) %>%
+ tally() %>%
+  dplyr::filter(n > 1)
+
+data_summary_group <- df_all_methods %>%
+  group_by(method, parasite_name) %>%
+  summarise(num_samples = n_distinct(ID)) %>%
+  ungroup() %>%
+  dplyr::filter(parasite_name %in% detected_across_methods$parasite_name)
 ```
 
 ```{r}
 # Step 1: Identify co-detection of parasites across methods in the same sample
 detection_counts <- df_all_methods %>%
   group_by(ID, parasite_name) %>%
+  dplyr::filter(parasite_name %in% detected_across_methods$parasite_name) %>%
   summarise(method_count = n_distinct(method))
 
 # Step 2: Merge back to the original data to understand the method distribution
 merged_data <- df_all_methods %>%
-  left_join(detection_counts, by = c("ID", "parasite_name"))
+  left_join(detection_counts, by = c("ID", "parasite_name")) %>%
+  drop_na()
 
 # Step 3: Calculate the proportion of occurrences for each parasite
 parasite_proportions <- merged_data %>%
@@ -48,69 +111,133 @@ parasite_proportions <- merged_data %>%
          proportion = count / total_count)
 ```
 
+stacked bar plot
 ```{r}
+stacked_bar_plot <- ggplot(parasite_proportions, aes(x = parasite_name, y = proportion, fill = factor(method_count), color = factor(method_count))) + 
+  geom_bar(stat = "identity", alpha = 0.8) + 
+  scale_fill_manual(values = heatmap_pal, labels = c("one", "two", "three", "or four methods")) + 
+  scale_color_manual(values = heatmap_pal) + 
+  guides(color = "none") + 
+  labs(
+    title = "", 
+    x = "", 
+    y = "Proportion", 
+    fill = "Detected in the same sample by"
+  ) + 
+  theme_void() + 
+  theme(
+    legend.position = "top", 
+    axis.text.x = element_blank(), 
+    text = element_text(size = 15),
+    legend.text = element_text(size = 15)
 
-# Stacked bar plot
-stacked_bar_plot <- ggplot(parasite_proportions, aes(x = parasite_name, y = proportion, fill = factor(method_count))) +
-  geom_bar(stat = "identity") +
-    scale_fill_manual(values = palette) + 
-  labs(title = "",
-       x = "",
-       y = "Proportion",
-       fill = "Agreement between methods") +
-  theme_minimal() +
-  theme(legend.position = "top",
-        axis.text.x = element_blank())
+  )
+
+stacked_bar_plot
+```
+
+
+```{r}
+mat_palette <- c(
+  "Slides" = methods_pal[5],
+  "PCR" = methods_pal[4],
+  "Metabarcoding" = methods_pal[3],  # Adjusted palette for Metabarcoding
+  "WGS paired-end 70%" = unassembled_pal[3],
+  "WGS assembled 20%" = assembled_pal[2]  # Lighten for variation
+)
 
 # Correlation matrix plot
-corr_matrix_plot <- ggplot(data_summary, aes(x = parasite_name, y = method)) +
-  geom_point(aes(size = num_samples), shape = 21,  fill = palette[5], color = "black") +  # Adjust the shape and fill color as needed
-  scale_size_continuous(range = c(3, 15), guide = guide_legend(title = "Number of Samples")) +  # Adjust the size range as needed
-  labs(title = "",
-       x = "Parasite Genera",
-       y = "Method") +
-  theme_minimal() +
-  theme(legend.position = "bottom",
-        axis.text.x = element_text(angle = 45, hjust = 1))
+corr_matrix_plot <- ggplot(data_summary_group, aes(x = parasite_name, y = method)) +
+  geom_point(aes(size = num_samples), shape = 21, color = "#79706EFF", fill = "#79706EFF", alpha = 0.6, stroke = 1) +
+  scale_size_continuous(
+    range = c(3, 15)) +  
+  scale_fill_manual(values = mat_palette, guide = "none") + 
+  labs(
+    title = "",
+    x = "Parasite Genera",
+    y = "Method"
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "bottom",
+    axis.text.x = element_text(angle = 45, hjust = 1, face = "italic"),
+    text = element_text(size = 15),
+    legend.text = element_text(size = 12)
+  ) +
+  guides(
+    size = guide_legend(
+      override.aes = list(fill = "#79706EFF"),
+      title = "Number of samples")
+  )
 
 
-combined_plot <- stacked_bar_plot / plot_spacer() / corr_matrix_plot + plot_layout(ncol = 1, heights = c(1, -0.4, 2))
+
+combined_plot <- stacked_bar_plot / plot_spacer() / corr_matrix_plot + plot_layout(ncol = 1, heights = c(1, -0.1, 1))
 
 print(combined_plot)
 
 ```
 ```{r}
-ggplot2::ggsave(file.path(figures_path, "Figure1.png"), 
+ggplot2::ggsave(file.path(figures_path, "detected_across_methods.png"), 
                 combined_plot,
                 width = 24,
-                height = 24,
+                height = 25,
                 units = c("cm"))
 ```
 
-
 ```{r}
-mat_eulerr <- 
-  df_all_methods %>%
-  select(-ID) %>%
-  group_by(method, parasite_name) %>%
-  distinct() %>%
-  mutate(present = TRUE) %>%
-  pivot_wider(names_from = method, values_from = present) %>%
-  replace(is.na(.), FALSE) %>%
-  column_to_rownames("parasite_name") %>%
-  as.matrix
-  
-fit <- euler(mat_eulerr)
+data_binary <- df_all_methods %>%
+  mutate(detected = 1) %>%  
+  dplyr::select(-ID) %>%
+  #mutate(method = str_replace_all(method, "Unassembled WGS mining C70", "Paired-end 70%")) %>%
+  #  mutate(method = str_replace_all(method, "Assembled WGS mining C20", "Assembled 20%")) %>%
+  filter(method %in% c("PCR", "Slides", "Metabarcoding", "WGS paired-end 70%", "WGS assembled 20%")) %>%
+  unique() %>%
+  pivot_wider(names_from = method,             # Spread methods as columns
+              values_from = detected, 
+              values_fill = 0)%>%
+  as.data.frame()
 
-p2 <- plot(fit, quantities = TRUE, counts = TRUE, labels = list(boxes = list(col = "black", fontface = "bold")), fill = palette)
-
-p2
 ```
+
 ```{r}
-ggplot2::ggsave(file.path(figures_path, "Figure3.png"), 
-                p2,
+# Convert to binary matrix
+# Create the combination matrix
+
+library(ComplexHeatmap)
+library(grid)
+library(ggplot2)
+comb_mat <- make_comb_mat(data_binary)
+
+# Sort intersections by size (biggest first)
+comb_mat <- comb_mat[order(comb_size(comb_mat), decreasing = TRUE)]
+
+# Create the UpSet plot with sorted intersections
+ht <- UpSet(
+  comb_mat,
+  top_annotation = upset_top_annotation(comb_mat, 
+                                        annotation_name_side = "left"),
+  right_annotation = upset_right_annotation(comb_mat, 
+                                            annotation_name_side = "top",
+                                            annotation_name_rot = 0),
+    comb_col = "black",
+    pt_size = unit(3, "mm"), lwd = 2,
+    set_order = order(set_size(comb_mat), decreasing = TRUE),
+  row_names_side = "right",  # Move labels to the right
+  row_title = "")
+
+# Draw the heatmap
+upset_grob <- grid.grabExpr(draw(ht))
+```
+
+```{r}
+ggplot2::ggsave(file.path(figures_path, "detected_across_methods_upstart.png"), 
+                upset_grob,
                 width = 20,
-                height = 20,
+                height = 13,
                 units = c("cm"))
 ```
+
+
+
 

@@ -1,0 +1,8 @@
+database_list=ncbi_genomes,ncbi_entrez,pr2,wormbase
+ncbi_datasets_conda=/data/biol-bird-parasites/sann7416/conda_environments/ncbi_datasets
+taxonkit_conda=/data/biol-bird-parasites/sann7416/conda_environments/taxonkit_env
+entrez_conda=/data/biol-bird-parasites/sann7416/conda_environments/entrez_env
+entrez_py_script=/data/biol-bird-parasites/sann7416/island-biogeography-wgs-mining/analysis/02-build_kraken_db/download_ncbi_seqs_entrez.py
+download_dir=/data/biol-bird-parasites/sann7416/island-biogeography-wgs-mining/data/reference_database/downloaded_sequences
+email=sarahnichols96@outlook.com
+taxid_file=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/reference_database/ncbi_custom/taxids_include.txt

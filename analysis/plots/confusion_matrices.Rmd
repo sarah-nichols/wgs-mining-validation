@@ -1,0 +1,210 @@
+---
+title: "Confusion matrix"
+output: html_notebook
+---
+
+```{r setup, echo=FALSE}
+# Knitr settings:
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(scipen = 999)
+```
+
+```{r, echo=FALSE}
+source("./src/wgs-mining-validation-source.R")
+```
+
+```{r}
+df_unassembled <- read_csv(file.path(data_path, "wgs-mining", "wrangled", "df_unassembled_wgs_mining.csv"))
+df_assembled <- read_csv(file.path(data_path, "wgs-mining", "wrangled", "df_assembled_wgs_mining.csv"))
+df_slides <- read_csv(file.path(data_path, "wgs-mining", "wrangled", "df_slides_wide.csv"))
+df_pcr <- read_csv(file.path(data_path, "wgs-mining", "wrangled", "df_pcr_wide.csv"))
+df_unassembled <- read.csv(file.path(data_path, "wgs-mining", "wrangled", "df_unassembled_wgs_mining.csv"))
+```
+
+prepare data
+```{r}
+assembled_wide_C20 <- df_assembled %>%
+  filter(confidence >= 20) %>%
+  select(sample_id, parasite_name) %>%
+  filter(parasite_name %in% c("Plasmodium", "Haemoproteus", "Leucocytozoon")) %>%
+  unique() %>%
+  mutate(presence = 1) %>%
+  pivot_wider(names_from = parasite_name, values_from = presence, values_fill = list(presence = 0)) %>%
+  mutate(Leucocytozoon = 0)
+
+unassembled_wide_C70 <- df_unassembled %>%
+  filter(confidence >= 70) %>%
+  select(sample_id, parasite_name) %>%
+  filter(parasite_name %in% c("Plasmodium", "Haemoproteus", "Leucocytozoon")) %>%
+  unique() %>%
+  mutate(presence = 1) %>%
+  pivot_wider(names_from = parasite_name, values_from = presence, values_fill = list(presence = 0))
+
+pcr_wide <- df_pcr %>%
+  dplyr::select(ID, Plasmodium, Haemoproteus, Leucocytozoon) %>%
+  dplyr::rename(sample_id = ID)
+
+combined_data <- full_join(pcr_wide, unassembled_wide_C70, by = "sample_id", suffix = c("_PCR", "_WGS")) %>%
+  left_join(assembled_wide_C20, by = "sample_id", suffix = c("", "_Contigs")) %>%
+  mutate(across(contains(c("Plasmodium", "Haemoproteus", "Leucocytozoon")), ~ replace_na(., 0))) %>%
+  drop_na()
+```
+
+create confusion matrices
+```{r}
+confusion_plasmodium_C70 <- confusionMatrix(factor(combined_data$Plasmodium_WGS, levels = c(0, 1)), factor(combined_data$Plasmodium_PCR, levels = c(0, 1)))
+confusion_haemoproteus_C70 <- confusionMatrix(factor(combined_data$Haemoproteus_WGS, levels = c(0, 1)), factor(combined_data$Haemoproteus_PCR, levels = c(0, 1)))
+confusion_leucocytozoon_C70 <- confusionMatrix(factor(combined_data$Leucocytozoon_WGS, levels = c(0, 1)), factor(combined_data$Leucocytozoon_PCR, levels = c(0, 1)))
+
+confusion_plasmodium_C20 <- confusionMatrix(factor(combined_data$Plasmodium, levels = c(0, 1)), factor(combined_data$Plasmodium_PCR, levels = c(0, 1)))
+confusion_haemoproteus_C20 <- confusionMatrix(factor(combined_data$Haemoproteus, levels = c(0, 1)), factor(combined_data$Haemoproteus_PCR, levels = c(0, 1)))
+confusion_leucocytozoon_C20 <- confusionMatrix(
+  factor(combined_data$Leucocytozoon, levels = c(0, 1)),  # Include levels to enforce 0 and 1
+  factor(combined_data$Leucocytozoon_PCR, levels = c(0, 1)))
+```
+
+function to calculate accuracy
+```{r}
+get_accuracy <- function(confusion_matrix) {
+  cm <- confusion_matrix$table
+  (cm[1, 1] + cm[2, 2]) / sum(cm)
+}
+
+library(pROC)
+
+get_auc <- function(actual, predicted) {
+  roc_obj <- roc(actual, predicted, quiet = TRUE)
+  round(auc(roc_obj), 3)
+}
+
+```
+
+
+
+
+function to extract confusion matrix metrics as a data frame
+```{r}
+extract_confusion_metrics <- function(conf_matrix, dataset_type, parasite_type, actual, predicted) {
+  cm <- conf_matrix$table
+  auc <- get_auc(actual, predicted)
+  data.frame(
+    Dataset = dataset_type,
+    Parasite = parasite_type,
+    True_Positive = cm[2, 2],
+    False_Positive = cm[2, 1],
+    True_Negative = cm[1, 1],
+    False_Negative = cm[1, 2],
+    AUC = auc
+  )
+}
+
+```
+
+
+```{r}
+metrics_plasmodium_C70 <- extract_confusion_metrics(
+  conf_matrix = confusion_plasmodium_C70,
+  dataset_type = "Paired-end 70%",
+  parasite_type = "Plasmodium",
+  actual = combined_data$Plasmodium_PCR,
+  predicted = combined_data$Plasmodium_WGS
+)
+
+metrics_haemoproteus_C70 <- extract_confusion_metrics(
+  conf_matrix = confusion_haemoproteus_C70,
+  dataset_type = "Paired-end 70%",
+  parasite_type = "Haemoproteus",
+  actual = combined_data$Haemoproteus_PCR,
+  predicted = combined_data$Haemoproteus_WGS
+)
+
+metrics_leucocytozoon_C70 <- extract_confusion_metrics(
+  conf_matrix = confusion_leucocytozoon_C70,
+  dataset_type = "Paired-end 70%",
+  parasite_type = "Leucocytozoon",
+  actual = combined_data$Leucocytozoon_PCR,
+  predicted = combined_data$Leucocytozoon_WGS
+)
+
+metrics_plasmodium_C20 <- extract_confusion_metrics(
+  conf_matrix = confusion_plasmodium_C20,
+  dataset_type = "Assembled 20%",
+  parasite_type = "Plasmodium",
+  actual = combined_data$Plasmodium_PCR,
+  predicted = combined_data$Plasmodium
+)
+
+metrics_haemoproteus_C20 <- extract_confusion_metrics(
+  conf_matrix = confusion_haemoproteus_C20,
+  dataset_type = "Assembled 20%",
+  parasite_type = "Haemoproteus",
+  actual = combined_data$Haemoproteus_PCR,
+  predicted = combined_data$Haemoproteus
+)
+
+metrics_leucocytozoon_C20 <- extract_confusion_metrics(
+  conf_matrix = confusion_leucocytozoon_C20,
+  dataset_type = "Assembled 20%",
+  parasite_type = "Leucocytozoon",
+  actual = combined_data$Leucocytozoon_PCR,
+  predicted = combined_data$Leucocytozoon
+)
+
+
+
+# Combine all metrics into a single data frame
+confusion_summary <- bind_rows(
+  df_plasmodium_C20, df_haemoproteus_C20, df_leucocytozoon_C20,
+  df_plasmodium_C70, df_haemoproteus_C70, df_leucocytozoon_C70
+)
+
+metrics_combined <- rbind(metrics_plasmodium_C70, metrics_haemoproteus_C70, metrics_leucocytozoon_C70, metrics_plasmodium_C20, metrics_haemoproteus_C20, metrics_leucocytozoon_C20)
+
+print(metrics_combined)
+
+```
+function to create confusion matrix plots with accuracy in title
+```{r}
+create_confusion_plot <- function(conf_matrix, x_label, y_label, title_prefix) {
+  accuracy <- round(get_accuracy(conf_matrix), 3)
+  title <- paste(title_prefix, "\nAccuracy:", accuracy)
+  
+  plotTable <- as.data.frame(conf_matrix$table) %>%
+    mutate(
+      Reference = factor(Reference, levels = c(0, 1), labels = c("Not Detected", "Detected")),
+      Prediction = factor(Prediction, levels = c(0, 1), labels = c("Not Detected", "Detected")),
+      goodbad = ifelse(Prediction == Reference, "Good", "Bad")
+    ) %>%
+    group_by(Reference) %>%
+    mutate(prop = Freq / sum(Freq))
+  
+  ggplot(data = plotTable, aes(x = Reference, y = Prediction, fill = goodbad, alpha = prop)) +
+    geom_tile() +
+    geom_text(aes(label = Freq), vjust = .5, fontface = "bold", alpha = 1) +
+    scale_fill_manual(values = c("Good" = palette_2[6], "Bad" = heatmap_pal[4])) +
+    xlab(x_label) + ylab(y_label) +
+    ggtitle(title) +
+    theme_bw() +
+    theme(legend.position = "", text = element_text(size = 15), panel.grid = element_blank())
+}
+```
+
+Define titles and create plots
+```{r}
+plot_plasmodium_C70 <- create_confusion_plot(confusion_plasmodium_C70, "PCR", "Paired-end", "Plasmodium - Paired-end 70%")
+plot_haemoproteus_C70 <- create_confusion_plot(confusion_haemoproteus_C70, "PCR", "Paired-end", "Haemoproteus - Paired-end 70%")
+plot_leucocytozoon_C70 <- create_confusion_plot(confusion_leucocytozoon_C70, "PCR", "Paired-end", "Leucocytozoon - Paired-end 70%")
+
+plot_plasmodium_C20 <- create_confusion_plot(confusion_plasmodium_C20, "PCR", "Assembled", "Plasmodium - Assembled 20%")
+plot_haemoproteus_C20 <- create_confusion_plot(confusion_haemoproteus_C20, "PCR", "Assembled", "Haemoproteus - Assembled 20%")
+plot_leucocytozoon_C20 <- create_confusion_plot(confusion_leucocytozoon_C20, "PCR", "Assembled", "Leucocytozoon - Assembled 20%")
+
+combined_plot <- (plot_plasmodium_C20 | plot_plasmodium_C70) /
+                 (plot_haemoproteus_C20 | plot_haemoproteus_C70) /
+                 (plot_leucocytozoon_C20 | plot_leucocytozoon_C70)
+
+print(combined_plot)
+```
+
+

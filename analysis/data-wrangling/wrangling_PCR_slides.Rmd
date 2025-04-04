@@ -1,0 +1,63 @@
+---
+title: "wrangling_PCR_slides"
+output: html_notebook
+---
+
+
+```{r setup, echo=FALSE}
+# Knitr settings: 
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
+options(scipen = 999)
+```
+
+```{r, echo=FALSE}
+source("./src/wgs-mining-validation-source.R")
+```
+
+```{r}
+sample_info <- read.csv(file.path(data_path, "sample-info", "df-migrant-miseq.csv"))
+
+df_slides <- read_csv(file.path(data_path, "slides", "parasite_counts_slides.csv"))
+
+df_pcr <- read_csv(file.path(data_path, "pcr", "PCR_results_combined.csv"))
+```
+
+```{r}
+df_pcr_ids <- df_pcr %>%
+    left_join(sample_info, ., by = "sample_id_blood") %>%
+  drop_na() %>%
+    dplyr::select(ID, sample_id_blood, Haemoproteus, Leucocytozoon, Plasmodium)
+
+
+pcr_long <- pivot_longer(df_pcr_ids, 
+                          cols = c(Leucocytozoon, Haemoproteus, Plasmodium), 
+                          names_to = "parasite_name", 
+                          values_to = "infected")
+```
+
+
+```{r}
+df_slides_ids <- df_slides %>%
+    left_join(sample_info, ., by = "ID") %>%
+    dplyr::select(ID, sample_id_blood, Haemoproteus, Leucocytozoon, Plasmodium, Atoxoplasma) %>%
+    mutate_at(vars(Haemoproteus, Leucocytozoon, Atoxoplasma), ~replace_na(., 0)) %>%
+  mutate(Plasmodium = ifelse(is.na(Plasmodium), 0, Plasmodium))
+
+slides_long <- pivot_longer(df_slides_ids, 
+                          cols = c(Leucocytozoon, Haemoproteus, Plasmodium, Atoxoplasma), 
+                          names_to = "parasite_name", 
+                          values_to = "infected") %>%
+  select(parasite_name, ID)
+
+```
+
+```{r}
+write_csv(df_slides_ids, file.path(data_path, "wgs-mining", "wrangled", "df_slides_wide.csv"))
+write_csv(slides_long, file.path(data_path, "wgs-mining", "wrangled", "df_slides_long.csv"))
+write_csv(df_pcr_ids, file.path(data_path, "wgs-mining", "wrangled", "df_pcr_wide.csv"))
+write_csv(pcr_long, file.path(data_path, "wgs-mining", "wrangled", "df_pcr_long.csv"))
+
+```
+
+
