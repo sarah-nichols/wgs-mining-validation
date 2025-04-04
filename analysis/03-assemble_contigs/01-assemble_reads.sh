@@ -32,10 +32,9 @@ done < "$PARAMETERS_FILE"
 # Retrieve the required parameters
 BAM_PATH=${PARAMS["bam_path"]}
 OUTPUT_DIR=${PARAMS["output_dir"]}
-CONDA_ENV_PATH=${PARAMS["conda_env_path"]}
 
 # Validate required parameters
-if [ -z "$BAM_PATH" ] || [ -z "$OUTPUT_DIR" ] || [ -z "$CONDA_ENV_PATH" ]; then
+if [ -z "$BAM_PATH" ] || [ -z "$OUTPUT_DIR" ]; then
     echo "Error: Missing required parameters in the parameters file."
     exit 1
 fi
@@ -48,21 +47,16 @@ module load BWA/0.7.17-GCCcore-11.2.0
 module load seqtk/1.3-GCC-11.2.0
 module load Anaconda3
 
-# Activate MetaBAT2 conda environment from the parameters file
-source activate "$CONDA_ENV_PATH"
-
 # Create output directories
 PAIRED_F_FASTQS="$OUTPUT_DIR/paired_fastqs_forward"
 PAIRED_R_FASTQS="$OUTPUT_DIR/paired_fastqs_reverse"
 SPADES_OUTPUT="$OUTPUT_DIR/spades_output"
 UNASSEMBLED_READS="$OUTPUT_DIR/unassembled_reads"
-BINNING_OUTPUT="$OUTPUT_DIR/binning_output"
 
 mkdir -p "$PAIRED_F_FASTQS"
 mkdir -p "$PAIRED_R_FASTQS"
 mkdir -p "$SPADES_OUTPUT"
 mkdir -p "$UNASSEMBLED_READS"
-mkdir -p "$BINNING_OUTPUT"
 
 # List all BAM files
 BAM_FILES=("$BAM_PATH"/paired_*.bam)
@@ -113,12 +107,13 @@ samtools fastq -1 "$UNASSEMBLED_READS/$(basename "${bam_file%.bam}").unassembled
 seqtk seq -A "$UNASSEMBLED_READS/$(basename "${bam_file%.bam}").unassembled.1.fastq" > "$UNASSEMBLED_READS/$(basename "${bam_file%.bam}").unassembled.1.fasta"
 seqtk seq -A "$UNASSEMBLED_READS/$(basename "${bam_file%.bam}").unassembled.2.fastq" > "$UNASSEMBLED_READS/$(basename "${bam_file%.bam}").unassembled.2.fasta"
 
-# Step 6: Combine contigs and unassembled reads into one FASTA file
+# Step 6a: Save contigs (assembled reads) separately
+assembled_fasta="$OUTPUT_DIR/assembled_sequences/$(basename "${bam_file%.bam}").assembled_sequences.fasta"
+mkdir -p "$(dirname "$assembled_fasta")"
+cp "$contigs_file" "$assembled_fasta"
+
+# Step 6b: Combine contigs and unassembled reads into one FASTA file
 combined_fasta="$OUTPUT_DIR/combined_sequences/$(basename "${bam_file%.bam}").combined_sequences.fasta"
 mkdir -p "$(dirname "$combined_fasta")"
 cat "$contigs_file" "$UNASSEMBLED_READS/$(basename "${bam_file%.bam}").unassembled.1.fasta" "$UNASSEMBLED_READS/$(basename "${bam_file%.bam}").unassembled.2.fasta" > "$combined_fasta"
 
-# New Step 7: Bin contigs using MetaBAT2
-metabat2 -i "$combined_fasta" -o "$BINNING_OUTPUT/$(basename "${bam_file%.bam}")_bins"
-
-conda deactivate

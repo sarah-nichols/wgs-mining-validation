@@ -1,0 +1,2 @@
+bam_path=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/filtered_bams
+output_dir=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data
