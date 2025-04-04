@@ -36,6 +36,8 @@ suppressPackageStartupMessages({
   library(readr)
   library(ggpubr)
   library(taxizedb)
+  library(ComplexHeatmap)
+  library(grid)
 
   })
 

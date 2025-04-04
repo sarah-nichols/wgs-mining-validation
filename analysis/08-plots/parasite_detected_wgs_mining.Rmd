@@ -3,10 +3,7 @@ title: "parasite_detected_wgs_mining"
 output: html_notebook
 ---
 
-issue = these are no longer cumulative
-
 ```{r setup, echo=FALSE}
-# Knitr settings: 
 knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 knitr::opts_chunk$set(echo = TRUE, eval = FALSE)
 options(scipen = 999)
@@ -22,10 +19,8 @@ df_assembled <- read.csv(file.path(data_path, "wgs-mining", "wrangled", "df_asse
 ```
 
 ```{r}
-# define confidence thresholds 
 confidence_thresholds <- seq(0, 90, by = 10) 
 
-#make df for each threshold and combine
 combined_plot_assembled <- lapply(confidence_thresholds, function(threshold) {
   df_assembled %>% 
   group_by(parasite_name, transmission_mode, host, confidence) %>% 
@@ -89,7 +84,6 @@ p_trans_mode_unassembled <- ggplot(combined_plot_unassembled, aes(x = confidence
         plot.title = element_text(hjust = 0)
   )
 
-# Second plot (Host)
 p_host_unassembled <- ggplot(combined_plot_unassembled, aes(x = confidence, y = n, fill = host)) + 
   geom_bar(position = "stack", stat = "identity", alpha = 0.8) +
   scale_fill_manual(values = palette_host, 
@@ -105,7 +99,6 @@ p_host_unassembled <- ggplot(combined_plot_unassembled, aes(x = confidence, y = 
         plot.title = element_text(hjust = 0)
   )
 
-# Second set of plots for Assembled WGS mining
 p_trans_mode_assembled <- ggplot(combined_plot_assembled, aes(x = confidence, y = n, fill = transmission_mode)) + 
   geom_bar(position = "stack", stat = "identity", alpha = 0.8) +
   scale_fill_manual(values = palette_transmission, 
@@ -121,7 +114,6 @@ p_trans_mode_assembled <- ggplot(combined_plot_assembled, aes(x = confidence, y 
         plot.title = element_text(hjust = 0)
   )
 
-# Second plot for Host - Assembled WGS mining
 p_host_assembled <- ggplot(combined_plot_assembled, aes(x = confidence, y = n, fill = host)) + 
   geom_bar(position = "stack", stat = "identity", alpha = 0.8) +
   scale_fill_manual(values = palette_host, 
@@ -140,45 +132,43 @@ p_host_assembled <- ggplot(combined_plot_assembled, aes(x = confidence, y = n, f
 p1_combined_plot_unassembled <- (p_trans_mode_unassembled + p_trans_mode_assembled) + 
   plot_layout(guides = "collect") & 
   theme(
-    legend.position = "right",  # Consistent legend placement
-    legend.title = element_text(size = 12),  # Adjust legend title size
-    legend.text = element_text(size = 10),   # Adjust legend text size
-    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),  # Center plot titles
-    plot.margin = margin(10, 10, 20, 10),  # Add space around plots
-    text = element_text(size = 15)  # Adjust text sizes
+    legend.position = "right",  
+    legend.title = element_text(size = 12), 
+    legend.text = element_text(size = 10),  
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),  
+    plot.margin = margin(10, 10, 20, 10),  
+    text = element_text(size = 15)  
   )
 
 p2_combined_plot_assembled <-  (p_host_unassembled + p_host_assembled) + 
   plot_layout(guides = "collect") & 
   theme(
-    legend.position = "right",  # Consistent legend placement
-    legend.title = element_text(size = 12),  # Adjust legend title size
-    legend.text = element_text(size = 10),   # Adjust legend text size
-    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),  # Center plot titles
-    plot.margin = margin(10, 10, 20, 10),  # Add space around plots
-    text = element_text(size = 15)  # Adjust text sizes
+    legend.position = "right",  
+    legend.title = element_text(size = 12),  
+    legend.text = element_text(size = 10),  
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),  
+    plot.margin = margin(10, 10, 20, 10), 
+    text = element_text(size = 15)  
   )
 
 combined_plot <- (p2_combined_plot_assembled / p1_combined_plot_unassembled) +
   plot_layout(nrow =2) & 
   theme(
-    legend.position = "right",  # Consistent legend placement
-    legend.title = element_text(size = 12),  # Adjust legend title size
-    legend.text = element_text(size = 10),   # Adjust legend text size
-    plot.title = element_text(size = 16, face = "bold", hjust = 0.5),  # Center plot titles
-    plot.margin = margin(10, 10, 20, 10),  # Add space around plots
-    text = element_text(size = 15)  # Adjust text sizes
+    legend.position = "right",  
+    legend.title = element_text(size = 12),  
+    legend.text = element_text(size = 10),   
+    plot.title = element_text(size = 16, face = "bold", hjust = 0.5), 
+    plot.margin = margin(10, 10, 20, 10),  
+    text = element_text(size = 15)  
   )
 
-# Add a shared title and axis labels
 combined_plot <- combined_plot + 
   theme(
-    plot.title = element_text(size = 18, face = "bold", hjust = 0.5, margin = margin(b = 10)),  # Add space below title
-    axis.title.x = element_text(size = 15, vjust = -1, margin = margin(t = 10)),  # Add space for x-axis
-    axis.title.y = element_text(size = 15, vjust = 1, margin = margin(r = 10))  # Add space for y-axis
+    plot.title = element_text(size = 18, face = "bold", hjust = 0.5, margin = margin(b = 10)),  
+    axis.title.x = element_text(size = 15, vjust = -1, margin = margin(t = 10)),  
+    axis.title.y = element_text(size = 15, vjust = 1, margin = margin(r = 10)) 
   )
 
-# Print the combined plot
 print(combined_plot)
 ```
 

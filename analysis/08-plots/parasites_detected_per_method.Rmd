@@ -71,7 +71,7 @@ df_all_methods <- rbind(df_metabarcoding_parasites, df_wgs_unassembled_parasites
 ```
 
 ```{r}
-# Create a unique identifier for each combination of parasite_name and method
+# unique identifier for each combination of parasite_name and method
 data_summary <- df_all_methods %>%
   group_by(method, parasite_name) %>%
   summarise(num_samples = n_distinct(ID)) %>%
@@ -90,18 +90,18 @@ data_summary_group <- df_all_methods %>%
 ```
 
 ```{r}
-# Step 1: Identify co-detection of parasites across methods in the same sample
+# identify co-detection of parasites across methods in the same sample
 detection_counts <- df_all_methods %>%
   group_by(ID, parasite_name) %>%
   dplyr::filter(parasite_name %in% detected_across_methods$parasite_name) %>%
   summarise(method_count = n_distinct(method))
 
-# Step 2: Merge back to the original data to understand the method distribution
+# merge back to the original data
 merged_data <- df_all_methods %>%
   left_join(detection_counts, by = c("ID", "parasite_name")) %>%
   drop_na()
 
-# Step 3: Calculate the proportion of occurrences for each parasite
+# calculate proportion of occurrences for each parasite
 parasite_proportions <- merged_data %>%
   group_by(parasite_name, method_count) %>%
   summarise(count = n()) %>%
@@ -141,9 +141,9 @@ stacked_bar_plot
 mat_palette <- c(
   "Slides" = methods_pal[5],
   "PCR" = methods_pal[4],
-  "Metabarcoding" = methods_pal[3],  # Adjusted palette for Metabarcoding
+  "Metabarcoding" = methods_pal[3], 
   "WGS paired-end 70%" = unassembled_pal[3],
-  "WGS assembled 20%" = assembled_pal[2]  # Lighten for variation
+  "WGS assembled 20%" = assembled_pal[2] 
 )
 
 # Correlation matrix plot
@@ -193,7 +193,7 @@ data_binary <- df_all_methods %>%
   #  mutate(method = str_replace_all(method, "Assembled WGS mining C20", "Assembled 20%")) %>%
   filter(method %in% c("PCR", "Slides", "Metabarcoding", "WGS paired-end 70%", "WGS assembled 20%")) %>%
   unique() %>%
-  pivot_wider(names_from = method,             # Spread methods as columns
+  pivot_wider(names_from = method,             
               values_from = detected, 
               values_fill = 0)%>%
   as.data.frame()
@@ -201,18 +201,9 @@ data_binary <- df_all_methods %>%
 ```
 
 ```{r}
-# Convert to binary matrix
-# Create the combination matrix
-
-library(ComplexHeatmap)
-library(grid)
-library(ggplot2)
 comb_mat <- make_comb_mat(data_binary)
-
-# Sort intersections by size (biggest first)
 comb_mat <- comb_mat[order(comb_size(comb_mat), decreasing = TRUE)]
 
-# Create the UpSet plot with sorted intersections
 ht <- UpSet(
   comb_mat,
   top_annotation = upset_top_annotation(comb_mat, 
@@ -223,10 +214,9 @@ ht <- UpSet(
     comb_col = "black",
     pt_size = unit(3, "mm"), lwd = 2,
     set_order = order(set_size(comb_mat), decreasing = TRUE),
-  row_names_side = "right",  # Move labels to the right
+  row_names_side = "right", 
   row_title = "")
 
-# Draw the heatmap
 upset_grob <- grid.grabExpr(draw(ht))
 ```
 

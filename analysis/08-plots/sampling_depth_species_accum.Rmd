@@ -23,7 +23,6 @@ df_conifer_wgs_contig_blackcap <- read_delim(file.path(data_path, "wgs-mining", 
 ```
 
 ```{r}
-# Function for data wrangling with column selection based on dataset name
 wrangle_data <- function(data, dataset_name) {
   # Create column for taxon_name
   data <- data %>%

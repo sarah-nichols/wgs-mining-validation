@@ -60,7 +60,7 @@ confusion_leucocytozoon_C70 <- confusionMatrix(factor(combined_data$Leucocytozoo
 confusion_plasmodium_C20 <- confusionMatrix(factor(combined_data$Plasmodium, levels = c(0, 1)), factor(combined_data$Plasmodium_PCR, levels = c(0, 1)))
 confusion_haemoproteus_C20 <- confusionMatrix(factor(combined_data$Haemoproteus, levels = c(0, 1)), factor(combined_data$Haemoproteus_PCR, levels = c(0, 1)))
 confusion_leucocytozoon_C20 <- confusionMatrix(
-  factor(combined_data$Leucocytozoon, levels = c(0, 1)),  # Include levels to enforce 0 and 1
+  factor(combined_data$Leucocytozoon, levels = c(0, 1)),  
   factor(combined_data$Leucocytozoon_PCR, levels = c(0, 1)))
 ```
 

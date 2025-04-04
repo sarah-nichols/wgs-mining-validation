@@ -45,12 +45,11 @@ custom_labels <- c(
   "FINAL_PAIRED_READS" = "Final Paired Reads"
 )
 
-# Calculate means for reporting
+# calculate means for reporting
 metric_means <- data_long %>%
   group_by(Metric) %>%
   summarize(mean_reads = mean(Reads))
 
-# plot
 p1 <- ggplot(data_long, aes(x = Metric, y = Reads)) +
   geom_violin(trim = FALSE, fill = "grey", color = "grey", alpha = 0.5) +
   geom_jitter(width = 0.2, size = 1.5, alpha = 0.5) + 
@@ -76,33 +75,27 @@ p1
 
 
 ```{r}
-# Add a column indicating the source of each dataset
 unassembled_data <- df_unassembled_metrics %>% 
   mutate(Source = "Paired-end")
 assembled_data <- df_assembled_metrics %>% 
   mutate(Source = "Assembled")
 
-# Combine the two datasets into one
 combined_data <- bind_rows(unassembled_data, assembled_data)
 
-# Make data long for plotting
 data_long <- combined_data %>%
   pivot_longer(cols = c(UNIDENTIFIED_READS, IDENTIFIED_READS), 
                names_to = "Classified", 
                values_to = "Reads")
 
-# calculate summary to report
 metric_means <- data_long %>%
   group_by(Source, Classified) %>%
   summarize(mean_reads = mean(Reads))
 
-# define custom labels
 custom_labels <- c(
   "IDENTIFIED_READS" = "Identified Reads", 
   "UNIDENTIFIED_READS" = "Unidentified Reads"
 )
 
-# plot
 p2 <- ggplot(data_long, aes(x = Classified, y = Reads)) + 
  geom_violin(trim = FALSE, alpha = 0.5, color = "grey", fill = "grey") +
   geom_jitter(width = 0.2, size = 1.5, alpha = 0.8) +

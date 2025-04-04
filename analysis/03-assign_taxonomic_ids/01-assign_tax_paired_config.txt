@@ -1,3 +1,0 @@
-bam_path=/data/biol-bird-parasites/sann7416/island-biogeography-wgs-mining/data/filtered_bams
-kraken_custom=/data/biol-bird-parasites/sann7416/island-biogeography-wgs-mining/data/reference_database/kraken_custom
-output_dir=/data/biol-bird-parasites/sann7416/island-biogeography-wgs-mining/data

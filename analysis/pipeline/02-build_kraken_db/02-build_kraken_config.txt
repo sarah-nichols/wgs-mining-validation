@@ -1,3 +1,0 @@
-kraken_custom=/data/biol-bird-parasites/sann7416/island-biogeography-wgs-mining/data/reference_database/kraken_custom
-eupath_map=/data/biol-bird-parasites/sann7416/island-biogeography-wgs-mining/data/reference_database/eupath_map
-seqs_to_add=/data/biol-bird-parasites/sann7416/wgs-mining-validation/data/reference_database/sequences_for_wgs-mining.txt
